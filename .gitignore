@@ -57,7 +57,7 @@ htmlcov/
 
 # Cloned repositories
 cbfpy/
-oscbf/
+# oscbf/
 paper_env/
 
 # Additional ignored directories
