@@ -1,4 +1,16 @@
-# aims-project
+# aims-project read-me updates
+
+## Ollama Integration and tests W3
+
+I created python files for the barrier generation from ollama and for visualizations in the barrier transformer folder.
+
+I was able to test that the call to ollama was succesful and the simulation was also working.
+
+I made changes to the simulation to have a fixed duration and also collected the details of the robot for the simulation for plotting later.
+
+I also reduced the prompt to be much simplier and gave a description of the environment and the robot to have a more accurate barrier.
+
+---
 
 ## LLM test
 The file containing the LLM tests with ollama is ollama_eval_standardized.ipynb, llm tests and ollama demo contain older version i was playing around with.

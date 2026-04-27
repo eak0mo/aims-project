@@ -8,7 +8,10 @@ limits, so the full-order (torque-control) OSCBF should perform better in this c
 """
 
 import pybullet
+import pybullet
 import argparse
+import sys
+
 from functools import partial
 
 import numpy as np
@@ -17,6 +20,9 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 import matplotlib.pyplot as plt
 
+sys.path.append("././")
+from barriertransformer.barrier_generate import generate_barrier
+from barriertransformer import visualization as vis
 # from package.pack import test
 
 from cbfpy import CBF
@@ -169,51 +175,15 @@ def compute_velocity_control(
     return cbf.safety_filter(q, u_nom)
 
 
-def get_camera_matrices(
-    target=(0, 0, 0),
-    distance=1.5,
-    pitch=-30,  # look slightly downward
-    roll=0,
-    fov=60,
-    aspect=1.0,
-    near=0.01,
-    far=10.0,
-    up_axis=2,  # Z-up
-):
-    """
-    Returns a list of (view_matrix, projection_matrix) tuples
-    for 3 cameras spaced 120 degrees apart around the robot.
-    """
-    yaw_angles = [0, 90, 180]  # evenly spaced around Z axis
-    matrices = []
-
-    projection_matrix = pybullet.computeProjectionMatrixFOV(
-        fov=fov,
-        aspect=aspect,
-        nearVal=near,
-        farVal=far,
-    )
-
-    for yaw in yaw_angles:
-        view_matrix = pybullet.computeViewMatrixFromYawPitchRoll(
-            cameraTargetPosition=target,
-            distance=distance,
-            yaw=yaw,
-            pitch=pitch,
-            roll=roll,
-            upAxisIndex=up_axis,
-        )
-        matrices.append((view_matrix, projection_matrix))
-
-    return matrices
-
-
 def main(control_method="torque"):
     assert control_method in ["torque", "velocity"]
 
     robot = load_panda()
-    pos_min = (0.25, -0.25, 0.25)
-    pos_max = (0.65, 0.25, 0.65)
+    # pos_min = (0.25, -0.25, 0.25)
+    # pos_max = (0.65, 0.25, 0.65)
+    print("Generating Barrier from Llama 3.1")
+    pos_min, pos_max = generate_barrier()
+    print("Barrier Generated: ", pos_min, pos_max)
 
     # NOTE: This term has a noticeable impact on the performance for this demo.
     # It's often neglected due to computational demands and model error
@@ -322,45 +292,68 @@ def main(control_method="torque"):
     else:
         raise ValueError(f"Invalid control method: {control_method}")
 
-    cameras = get_camera_matrices()
+    cameras, pixel_width, pixel_height = vis.get_camera_matrices()
 
     images = []
     for view, proj in cameras:
         width, height, rgb, depth, seg = env.client.getCameraImage(
-            width=1024,
-            height=768,
+            width=pixel_width,
+            height=pixel_height,
             viewMatrix=view,
             projectionMatrix=proj,
             renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,
         )
         images.append(rgb)
 
-    fig, axes = plt.subplots(1, len(images), figsize=(10, 8))
-    for i, (ax, img) in enumerate(zip(axes, images)):
-        ax.imshow(img)
-        # ax.axis("off")
-        ax.set_title(f"Camera {i + 1}")
-
-    # plt.tight_layout()
-    # plt.savefig('multiple_angles.pdf')
-    plt.show()
-
-    # width, height, rgb_img, depth_img, seg_img = env.client.getCameraImage(
-    #     width=1024, height=768,
-    #     renderer = pybullet.ER_BULLET_HARDWARE_OPENGL
-    #     )
-    # plt.imshow(rgb_img)
-    # plt.savefig("dynamic_motion_img.png")
-    # plt.show()
+    vis.plot_views(
+        images,
+        pixel_width,
+        pixel_height,
+        show_plots=True,
+        name="improved_dynamic",
+        save_image=True,
+    )
 
     # env.client.startStateLogging(env.client.STATE_LOGGING_VIDEO_MP4, "my_video.mp4")
 
-    while True:
+    duration = 10.0
+    num_timestep = int(duration / timestep)
+
+    # while True:
+    #     q_qdot = env.get_joint_state()
+    #     z_zdot_ee_des = env.get_desired_ee_state()
+    #     tau = compute_control(q_qdot, z_zdot_ee_des)
+    #     env.apply_control(tau)
+    #     env.step()
+    q_hist = []
+    q_des_hist = []
+    u_safe_hist = []
+
+    for i in range(num_timestep):
         q_qdot = env.get_joint_state()
         z_zdot_ee_des = env.get_desired_ee_state()
         tau = compute_control(q_qdot, z_zdot_ee_des)
         env.apply_control(tau)
         env.step()
+
+        q_hist.append(q_qdot)
+        q_des_hist.append(z_zdot_ee_des)
+        u_safe_hist.append(tau)
+
+    # ts = duration * np.arange(num_timestep)
+
+    # fig, axs = plt.subplots(3, 2, figsize=(10, 15))
+    # axs[0, 0].plot(ts, np.array(q_hist)[:, 0], label="q1")
+    # axs[0, 0].plot(ts, np.array(q_hist)[:, 1], label="q2")
+    # axs[0, 0].plot(ts, np.array(q_hist)[:, 2], label="q3")
+    # axs[0, 0].plot(ts, np.array(q_des_hist)[:, 0], label="q1_des")
+    # axs[0, 0].plot(ts, np.array(q_des_hist)[:, 1], label="q2_des")
+    # axs[0, 0].plot(ts, np.array(q_des_hist)[:, 2], label="q3_des")
+    # axs[0, 0].legend()
+    # axs[0, 0].set_title("Joint positions")
+    print(np.array(q_hist)[0].shape)
+    print(np.array(q_des_hist)[0].shape)
+    print(np.array(u_safe_hist)[0].shape)
 
 
 if __name__ == "__main__":
