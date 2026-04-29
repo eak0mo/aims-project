@@ -10,6 +10,16 @@ I made changes to the simulation to have a fixed duration and also collected the
 
 I also reduced the prompt to be much simplier and gave a description of the environment and the robot to have a more accurate barrier.
 
+29-04
+I added video capturing by installing ffmpeg.
+did some changes on the prompt which seemed to help
+
+I also added singularity avoidance that is available in the package which improved the performance of the model between the result plots.
+
+I tried to give the input position of the environment as json like inputs but they didn't work because the barrier needs to be given before parameters can be found but i used the values and a workaround
+
+I will work on reviewing some papers on LLM for robotics on thursday and friday and continue writing the report and going through other literature i have
+
 ---
 
 ## LLM test

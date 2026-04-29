@@ -26,20 +26,21 @@ sys_prompt = (
     "ROBOT CONTEXT:\n"
     "The Franka has a 855 mm reach and is mounted at the origin (0, 0, 0) on a table. "
     "Its full reachable workspace is roughly a sphere of radius ~0.855 m centered ~0.33 m above the base. "
-    "The arm sweeps ±855 mm in X and Y, and from roughly -0.1 m to 1.19 m in Z (above the table). "
-    "The base itself is ~0.33 m tall."
     "YOUR TASK:\n"
-    "Given a description of the task of the robot and its environment, output a single cuboid barrier "
-    "that fully enclose the motion of the robots end-effector and the task. The barrier is defined by:\n"
+    "Given a description of the task of the robot, the base and end-effector positions and the trajectory of the target object, output a single cuboid barrier "
+    "The trajectory is a sinusoidal path defined by the amplitude and angular frequency. "
+    "that fully enclose the motion of the robots end-effector and the task motion. The barrier is defined by:\n"
     "  - center: (x, y, z) in meters\n"
     "  - size: (length_x, length_y, length_z) in meters\n\n"
     "RULES:\n"
-    "1. The barrier must always contain the trajectory of the robot's end-effector for the described task.\n"
-    "3. If the user mentions additional objects or obstacles, expand the barrier to contain them too or shrink to avoid obstacles\n"
+    "1. The barrier should ALWAYS contain the trajectory of the target object firstly, and then contain the end-effector based on the motion in the environment, minimally in all 3 dimensions.\n"
+    "2. If the user mentions additional objects or obstacles, expand the barrier to contain them too or shrink to avoid obstacles\n"
+    "3. The output barrier should contain the full path of the trajectory "
     "OUTPUT FORMAT:\n"
     "center: (x, y, z)\n"
     "size: (lx, ly, lz)\n"
 )
+
 dynamic_motion_prompt = "A franka emika kuka robot is located at (0,0,0) as its base, with the end-effector ( which is not close to the point of the base) tracking a ball at (0.55,0,0.45), and moving in a sinusodial trajectory with amplitude (0.25,0,0) and frquency(5,0,0). Generate a barrier to contain both the path of ball and the robot together in all three dimensions and the robot has workspace above 0"
 
 
@@ -48,8 +49,13 @@ def test(prompt=sys_prompt):
     print(prompt)
 
 
-def create_prompt():
-    return
+def create_prompt(base_pos, ee_pos, targ_pos, targ_amp, targ_freq):
+    prompt = f"""
+    A franka emika kuka robot is loaded into the environment with it's base at: {base_pos}. 
+    The end-effector  is located at {ee_pos}, and it is tracking a ball starting at {targ_pos}, and moving in a sinusodial trajectory with amplitude {targ_amp} and angular frequency {targ_freq}. Generate a barrier that contains both the path of ball and the robot together in all three dimensions. 
+    Make use of the system prompt in designing this barrier
+    """
+    return prompt
 
 
 def extract_barrier(
@@ -82,7 +88,16 @@ def get_min_max(center: list, lengths: list):
     return [round(v, 3) for v in min_p], [round(v, 3) for v in max_p]
 
 
-def generate_barrier():
-    barrier = extract_barrier()
+def generate_barrier(
+    user_prompt: str = dynamic_motion_prompt, model_name: str = "llama3.1"
+):
+    barrier = extract_barrier(prompt_text=user_prompt, model_name=model_name)
+    print(
+        f"Barrier parameters generated from {model_name}, center: {barrier[0]}, lengths: {barrier[1]}"
+    )
     min, max = get_min_max(barrier[0], barrier[1])
     return tuple(min), tuple(max)
+
+
+# if __name__ == "__main__":
+#     min_bound, max_bound = generate_barrier()

@@ -2,11 +2,14 @@ import pybullet
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import jax
+import os
+from oscbf.core.manipulator import load_panda
 
 
 def get_camera_matrices(
     target=(0.44, 0.16, 0.28),
-    distance=1,
+    distance=1.7,
     pitch=-27.8,
     roll=0,
     fov=60,
@@ -55,8 +58,15 @@ def get_camera_matrices(
 
 
 def plot_views(
-    images, pixel_width, pixel_height, show_plots=False, name=None, save_image=False
+    images,
+    pixel_width,
+    pixel_height,
+    show_plots=False,
+    name=None,
+    save_image=False,
+    folder: str = "test_dynamotion_plots",
 ):
+    set_style()
     camera_labels = ["Camera 1", "Camera 2", "Camera 3", "Top-down"]
     mosaic = [["Camera 1", "Camera 2"], ["Camera 3", "Top-down"]]
 
@@ -69,7 +79,9 @@ def plot_views(
         axes[label].axis("off")
 
     if save_image:
+        # path = os.path.join(folder, name)
         plt.savefig(name + ".pdf")
+        # plt.savefig(path)
 
     if show_plots:
         plt.show()
@@ -107,3 +119,109 @@ def set_style():
             "axes.spines.top": False,
         },
     )
+
+
+def plot_link_simulations(
+    q_hist,
+    q_des_hist,
+    u_safe_hist,
+    ts,
+    names=None,
+    show_plots=False,
+    save_image=False,
+    name="simulation_plot",
+):
+    """
+    Plots 3 different plots: the current and desired EE position, the safe command,
+    and the difference between task and the end-effector position.
+    """
+
+    set_style()
+    q_hist = np.asarray(q_hist)
+    q_des_hist = np.asarray(q_des_hist)
+    u_safe_hist = np.asarray(u_safe_hist)
+    ts = np.asarray(ts)
+
+    # 1. Compute actual EE position
+    robot = load_panda()
+
+    # We vmap over the joint positions (first num_joints elements of q_hist)
+    q_pos = q_hist[:, : robot.num_joints]
+
+    # Compute EE positions using forward kinematics
+    ee_pos_hist = jax.vmap(robot.ee_position)(q_pos)
+
+    # EE desired is in q_des_hist (N, 18), first 3 are positions
+    ee_des_pos_hist = q_des_hist[:, :3]
+
+    # EE task error (difference between desired task and actual EE position)
+    ee_error = ee_des_pos_hist - ee_pos_hist
+
+    # Create 3 subplots using subplot_mosaic
+    mosaic = [["pos"], ["cmd"], ["err"]]
+    fig, axes = plt.subplot_mosaic(mosaic, figsize=(10, 12), sharex=True)
+
+    # Plot 1: EE Position
+    ax_pos = axes["pos"]
+    ax_pos.plot(ts, ee_pos_hist[:, 0], label="Current X", color="r", linestyle="-")
+    ax_pos.plot(ts, ee_pos_hist[:, 1], label="Current Y", color="g", linestyle="-")
+    ax_pos.plot(ts, ee_pos_hist[:, 2], label="Current Z", color="b", linestyle="-")
+    ax_pos.plot(
+        ts,
+        ee_des_pos_hist[:, 0],
+        label="Desired X",
+        color="r",
+        linestyle="--",
+        alpha=0.7,
+    )
+    ax_pos.plot(
+        ts,
+        ee_des_pos_hist[:, 1],
+        label="Desired Y",
+        color="g",
+        linestyle="--",
+        alpha=0.7,
+    )
+    ax_pos.plot(
+        ts,
+        ee_des_pos_hist[:, 2],
+        label="Desired Z",
+        color="b",
+        linestyle="--",
+        alpha=0.7,
+    )
+    ax_pos.set_ylabel("Position (m)")
+    ax_pos.set_title("Current and Desired EE Position")
+    ax_pos.legend( ncol=2)
+
+    # Plot 2: Safe Command
+    ax_cmd = axes["cmd"]
+    num_links = u_safe_hist.shape[1]
+    for i in range(num_links):
+        label = names[i] if names is not None else f"Link {i + 1}"
+        ax_cmd.plot(ts, u_safe_hist[:, i], label=label)
+    ax_cmd.set_ylabel("Control Command")
+    ax_cmd.set_title("Safe Control Commands")
+    ax_cmd.legend( ncol=4)
+
+    # Plot 3: Error
+    ax_err = axes["err"]
+    ax_err.plot(ts, ee_error[:, 0], label="Error X", color="r")
+    ax_err.plot(ts, ee_error[:, 1], label="Error Y", color="g")
+    ax_err.plot(ts, ee_error[:, 2], label="Error Z", color="b")
+    error_norm = np.linalg.norm(ee_error, axis=1)
+    ax_err.plot(ts, error_norm, label="Error Norm", color="k", linestyle=":")
+    ax_err.set_xlabel("Time (s)")
+    ax_err.set_ylabel("Position Error (m)")
+    ax_err.set_title("Difference Between Task and EE Position")
+    ax_err.legend()
+
+    # plt.tight_layout()
+
+    if save_image:
+        plt.savefig(name + ".pdf")
+
+    if show_plots:
+        plt.show()
+
+    return fig, axes

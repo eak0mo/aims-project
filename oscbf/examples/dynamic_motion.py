@@ -18,10 +18,10 @@ import numpy as np
 import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 sys.path.append("././")
-from barriertransformer.barrier_generate import generate_barrier
+from barriertransformer.barrier_generate import generate_barrier, create_prompt
 from barriertransformer import visualization as vis
 # from package.pack import test
 
@@ -53,6 +53,7 @@ class EESafeSetTorqueConfig(OSCBFTorqueConfig):
     ):
         self.pos_min = np.asarray(pos_min)
         self.pos_max = np.asarray(pos_max)
+        self.singularity_tol = 1e-3
         super().__init__(
             robot, compensate_centrifugal_coriolis=compensate_centrifugal_coriolis
         )
@@ -60,7 +61,14 @@ class EESafeSetTorqueConfig(OSCBFTorqueConfig):
     def h_2(self, z, **kwargs):
         q = z[: self.num_joints]
         ee_pos = self.robot.ee_position(q)
-        return jnp.concatenate([self.pos_max - ee_pos, ee_pos - self.pos_min])
+        # return jnp.concatenate([self.pos_max - ee_pos, ee_pos - self.pos_min])
+        h_ee_safe_set = jnp.concatenate([self.pos_max - ee_pos, ee_pos - self.pos_min])
+
+        # added singularlity avoidance from multiple_safety_conditions.py
+        sigmas = jax.lax.linalg.svd(self.robot.ee_jacobian(q), compute_uv=False)
+        h_singularity = jnp.array([jnp.prod(sigmas) - self.singularity_tol])
+
+        return jnp.concatenate([h_ee_safe_set, h_singularity])
 
     def alpha(self, h):
         return 10.0 * h
@@ -181,8 +189,24 @@ def main(control_method="torque"):
     robot = load_panda()
     # pos_min = (0.25, -0.25, 0.25)
     # pos_max = (0.65, 0.25, 0.65)
-    print("Generating Barrier from Llama 3.1")
-    pos_min, pos_max = generate_barrier()
+
+    # q0 = env.get_joint_state()[: robot.num_joints] doesn't work as it is defined later
+    # ee_pos0 = np.array(robot.ee_position(q0))
+    # print(
+    #     f"Starting EE Position: [{ee_pos0[0]:.3f}, {ee_pos0[1]:.3f}, {ee_pos0[2]:.3f}]"
+    # )
+    amplitude = (0.25, 0, 0)
+    frequency = (5, 0, 0)
+
+    prompt = create_prompt(
+        (0, 0, 0), ([0.240, -0.000, 0.429]), ([0.55, 0, 0.45]), amplitude, frequency
+    )
+    # print(prompt)
+
+    # integration with llama 3.1
+    model = "llama3.1"
+    print(f"Generating Barrier from {model}")
+    pos_min, pos_max = generate_barrier(user_prompt=prompt)
     print("Barrier Generated: ", pos_min, pos_max)
 
     # NOTE: This term has a noticeable impact on the performance for this demo.
@@ -207,8 +231,8 @@ def main(control_method="torque"):
                 [0, 0, -1],
             ]
         ),
-        amplitude=(0.25, 0, 0),
-        angular_freq=(5, 0, 0),
+        amplitude=amplitude,
+        angular_freq=frequency,
         phase=(0, 0, 0),
     )
     timestep = 1 / 1000
@@ -310,11 +334,16 @@ def main(control_method="torque"):
         pixel_width,
         pixel_height,
         show_plots=True,
-        name="improved_dynamic",
-        save_image=True,
+        name="test_dymotion_plots/mult_img_29_04sing",
+        folder="test_dynamotion_plots",
+        save_image=False,
     )
 
-    # env.client.startStateLogging(env.client.STATE_LOGGING_VIDEO_MP4, "my_video.mp4")
+    if RECORD_VIDEO:
+        # for saving the video in the env
+        env.client.startStateLogging(
+            env.client.STATE_LOGGING_VIDEO_MP4, "dynamic_motion_sing.mp4"
+        )
 
     duration = 10.0
     num_timestep = int(duration / timestep)
@@ -340,20 +369,17 @@ def main(control_method="torque"):
         q_des_hist.append(z_zdot_ee_des)
         u_safe_hist.append(tau)
 
-    # ts = duration * np.arange(num_timestep)
+    ts = duration * np.arange(num_timestep)
 
-    # fig, axs = plt.subplots(3, 2, figsize=(10, 15))
-    # axs[0, 0].plot(ts, np.array(q_hist)[:, 0], label="q1")
-    # axs[0, 0].plot(ts, np.array(q_hist)[:, 1], label="q2")
-    # axs[0, 0].plot(ts, np.array(q_hist)[:, 2], label="q3")
-    # axs[0, 0].plot(ts, np.array(q_des_hist)[:, 0], label="q1_des")
-    # axs[0, 0].plot(ts, np.array(q_des_hist)[:, 1], label="q2_des")
-    # axs[0, 0].plot(ts, np.array(q_des_hist)[:, 2], label="q3_des")
-    # axs[0, 0].legend()
-    # axs[0, 0].set_title("Joint positions")
-    print(np.array(q_hist)[0].shape)
-    print(np.array(q_des_hist)[0].shape)
-    print(np.array(u_safe_hist)[0].shape)
+    vis.plot_link_simulations(
+        np.array(q_hist),
+        np.array(q_des_hist),
+        np.array(u_safe_hist),
+        ts,
+        show_plots=True,
+        save_image=False,
+        name="test_dymotion_plots/dynamic_motion_metric_29_04_sing",
+    )
 
 
 if __name__ == "__main__":
