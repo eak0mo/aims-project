@@ -192,7 +192,7 @@ def plot_link_simulations(
     )
     ax_pos.set_ylabel("Position (m)")
     ax_pos.set_title("Current and Desired EE Position")
-    ax_pos.legend( ncol=2)
+    ax_pos.legend(ncol=2)
 
     # Plot 2: Safe Command
     ax_cmd = axes["cmd"]
@@ -202,7 +202,7 @@ def plot_link_simulations(
         ax_cmd.plot(ts, u_safe_hist[:, i], label=label)
     ax_cmd.set_ylabel("Control Command")
     ax_cmd.set_title("Safe Control Commands")
-    ax_cmd.legend( ncol=4)
+    ax_cmd.legend(ncol=4)
 
     # Plot 3: Error
     ax_err = axes["err"]

@@ -213,6 +213,8 @@ def main(control_method="torque", num_bodies=25):
     # Only use a subset of them based on the desired quantity
     collision_pos = np.atleast_2d(all_collision_pos[:num_bodies])
     collision_radii = all_collision_radii[:num_bodies]
+    # print(collision_pos)
+    # print(collision_radii)
     collision_data = {"positions": collision_pos, "radii": collision_radii}
 
     torque_config = CollisionsConfig(robot, z_min, collision_pos, collision_radii)

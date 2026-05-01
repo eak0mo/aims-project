@@ -8,7 +8,6 @@ limits, so the full-order (torque-control) OSCBF should perform better in this c
 """
 
 import pybullet
-import pybullet
 import argparse
 import sys
 
@@ -206,8 +205,9 @@ def main(control_method="torque"):
     # integration with llama 3.1
     model = "llama3.1"
     print(f"Generating Barrier from {model}")
-    pos_min, pos_max = generate_barrier(user_prompt=prompt)
-    print("Barrier Generated: ", pos_min, pos_max)
+    pos_min, pos_max, wb_min, wb_max = generate_barrier(user_prompt=prompt)
+    print("Barriers Generated: ee:", pos_min, pos_max)
+    print("Barriers Generated: whole body:", wb_min, wb_max)
 
     # NOTE: This term has a noticeable impact on the performance for this demo.
     # It's often neglected due to computational demands and model error
@@ -325,7 +325,7 @@ def main(control_method="torque"):
             height=pixel_height,
             viewMatrix=view,
             projectionMatrix=proj,
-            renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,
+            renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,  # ER_TINY_RENDERER
         )
         images.append(rgb)
 
@@ -334,7 +334,7 @@ def main(control_method="torque"):
         pixel_width,
         pixel_height,
         show_plots=True,
-        name="test_dymotion_plots/mult_img_29_04sing",
+        name="test_dymotion_plots/mult_img_01_05_full",
         folder="test_dynamotion_plots",
         save_image=False,
     )
@@ -342,7 +342,7 @@ def main(control_method="torque"):
     if RECORD_VIDEO:
         # for saving the video in the env
         env.client.startStateLogging(
-            env.client.STATE_LOGGING_VIDEO_MP4, "dynamic_motion_sing.mp4"
+            env.client.STATE_LOGGING_VIDEO_MP4, "test_dymotion_plots/full_int.mp4"
         )
 
     duration = 10.0
@@ -378,7 +378,7 @@ def main(control_method="torque"):
         ts,
         show_plots=True,
         save_image=False,
-        name="test_dymotion_plots/dynamic_motion_metric_29_04_sing",
+        name="test_dymotion_plots/dynamic_motion_metric_01_05_full",
     )
 
 

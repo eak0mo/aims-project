@@ -14,9 +14,9 @@ from oscbf.core.manipulation_env import FrankaTorqueControlEnv
 from oscbf.core.oscbf_configs import OSCBFTorqueConfig
 from oscbf.core.controllers import PoseTaskTorqueController
 
-
 @jax.tree_util.register_static
 class SelfCollisionConfig(OSCBFTorqueConfig):
+
     def __init__(
         self,
         robot: Manipulator,
@@ -30,7 +30,7 @@ class SelfCollisionConfig(OSCBFTorqueConfig):
     def h_2(self, z, z_obs):
         # Extract values
         q = z[: self.num_joints]
-        qdot = z[self.num_joints :]
+        qdot = z[self.num_joints:]
 
         # Self collision avoidance
         robot_collision_pos_rad = self.robot.link_self_collision_data(q)
@@ -92,15 +92,7 @@ class SelfCollisionConfig(OSCBFTorqueConfig):
             ]
         )
 
-        return jnp.concatenate(
-            [
-                h_self_collision,
-                h_base_self_collision,
-                h_dynamic_obstacle,
-                h_joint_limits,
-                h_singularity,
-            ]
-        )
+        return jnp.concatenate([h_self_collision, h_base_self_collision, h_dynamic_obstacle, h_joint_limits, h_singularity])
 
     def alpha(self, h):
         return 10.0 * h
@@ -119,7 +111,7 @@ def compute_control(
 ):
     # HACK: Assume a fixed desired end effector state for this demo
     # This ee pose is from running FK on the initial joint state
-    ee_pos_des = jnp.array([2.39585972e-01, -6.18426969e-12, 4.28947096e-01])
+    ee_pos_des = jnp.array([2.39585972e-01, -6.18426969e-12,  4.28947096e-01])
     ee_rmat_des = jnp.diag(jnp.array([1.0, -1.0, -1.0]))
     ee_twist_des = jnp.zeros(6)
     z_ee_des = jnp.concatenate([ee_pos_des, ee_rmat_des.ravel(), ee_twist_des])

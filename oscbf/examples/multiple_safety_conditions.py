@@ -11,6 +11,7 @@ should give a good view of the controller's performance under common situations
 encountered in practice.
 """
 
+import sys
 from functools import partial
 
 import numpy as np
@@ -18,6 +19,10 @@ import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 from cbfpy import CBF
+
+sys.path.append("././")
+from barriertransformer import barrier_generate as barrier
+from barriertransformer import visualization as vis
 
 from oscbf.core.manipulator import Manipulator, load_panda
 from oscbf.core.manipulation_env import FrankaTorqueControlEnv
@@ -27,7 +32,6 @@ from oscbf.core.controllers import PoseTaskTorqueController
 
 @jax.tree_util.register_static
 class CombinedConfig(OSCBFTorqueConfig):
-
     def __init__(
         self,
         robot: Manipulator,
@@ -163,6 +167,20 @@ def main():
     robot = load_panda()
     ee_pos_min = np.array([0.15, -0.25, 0.25])
     ee_pos_max = np.array([0.75, 0.25, 0.75])
+
+    # amplitude = (0.25, 0, 0)
+    # frequency = (5, 0, 0)
+
+    # prompt = barrier.create_prompt(
+    #     (0, 0, 0), ([0.240, -0.000, 0.429]), ([0.55, 0, 0.45]), amplitude, frequency
+    # )
+    # # print(prompt)
+
+    # # integration with llama 3.1
+    # model = "llama3.1"
+    # print(f"Generating Barrier from {model}")
+    # ee_pos_min, ee_pos_max = barrier.generate_barrier(user_prompt=prompt)
+    # print("Barrier Generated: ", ee_pos_min, ee_pos_max)
     wb_pos_min = np.array([-0.5, -0.5, 0.0])
     wb_pos_max = np.array([0.75, 0.5, 1.0])
     collision_pos = np.array([[0.5, 0.5, 0.5]])

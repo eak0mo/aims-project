@@ -2,6 +2,11 @@
 
 ## Ollama Integration and tests W3
 
+01-05
+Added whole body barriers and collision inputs for the propmt generation, also added a new prompt generations for the list of collision points.
+
+added an additional prompt that is more finetuned to handle the collision and everything else. next plans are listed in the project report
+
 I created python files for the barrier generation from ollama and for visualizations in the barrier transformer folder.
 
 I was able to test that the call to ollama was succesful and the simulation was also working.
