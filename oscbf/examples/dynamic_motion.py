@@ -334,9 +334,9 @@ def main(control_method="torque"):
         pixel_width,
         pixel_height,
         show_plots=True,
-        name="test_dymotion_plots/mult_img_01_05_full",
+        name="test_dymotion_plots/mult_img_04_05_latestprompt_oneshot",
         folder="test_dynamotion_plots",
-        save_image=False,
+        save_image=True,
     )
 
     if RECORD_VIDEO:
@@ -377,8 +377,8 @@ def main(control_method="torque"):
         np.array(u_safe_hist),
         ts,
         show_plots=True,
-        save_image=False,
-        name="test_dymotion_plots/dynamic_motion_metric_01_05_full",
+        save_image=True,
+        name="test_dymotion_plots/dynamic_motion_metric_04_05_latestprompt_oneshot",
     )
 
 

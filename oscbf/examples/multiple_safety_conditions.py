@@ -12,6 +12,7 @@ encountered in practice.
 """
 
 import sys
+import pybullet
 from functools import partial
 
 import numpy as np
@@ -27,6 +28,7 @@ from barriertransformer import visualization as vis
 from oscbf.core.manipulator import Manipulator, load_panda
 from oscbf.core.manipulation_env import FrankaTorqueControlEnv
 from oscbf.core.oscbf_configs import OSCBFTorqueConfig
+from oscbf.utils.trajectory import SinusoidalTaskTrajectory
 from oscbf.core.controllers import PoseTaskTorqueController
 
 
@@ -165,26 +167,39 @@ def compute_control(
 
 def main():
     robot = load_panda()
-    ee_pos_min = np.array([0.15, -0.25, 0.25])
-    ee_pos_max = np.array([0.75, 0.25, 0.75])
+    # ee_pos_min = np.array([0.15, -0.25, 0.25])
+    # ee_pos_max = np.array([0.75, 0.25, 0.75])
+    # wb_pos_min = np.array([-0.5, -0.5, 0.0])
+    # wb_pos_max = np.array([0.75, 0.5, 1.0])
 
-    # amplitude = (0.25, 0, 0)
-    # frequency = (5, 0, 0)
-
-    # prompt = barrier.create_prompt(
-    #     (0, 0, 0), ([0.240, -0.000, 0.429]), ([0.55, 0, 0.45]), amplitude, frequency
-    # )
-    # # print(prompt)
-
-    # # integration with llama 3.1
-    # model = "llama3.1"
-    # print(f"Generating Barrier from {model}")
-    # ee_pos_min, ee_pos_max = barrier.generate_barrier(user_prompt=prompt)
-    # print("Barrier Generated: ", ee_pos_min, ee_pos_max)
-    wb_pos_min = np.array([-0.5, -0.5, 0.0])
-    wb_pos_max = np.array([0.75, 0.5, 1.0])
     collision_pos = np.array([[0.5, 0.5, 0.5]])
     collision_radii = np.array([0.3])
+
+    iniat_pos = (0.4, 0, 0.35)
+    amplitude = (0, 0.25, 0)
+    frequency = (0, 5, 0)
+
+    prompt = barrier.create_prompt_col(
+        ([0, 0, 0]),
+        ([0.240, -0.000, 0.429]),
+        iniat_pos,
+        amplitude,
+        frequency,
+        collision_pos.tolist(),
+        collision_radii,
+    )
+
+    # print(prompt)
+
+    # integration with llama 3.1
+    model = "llama3.1"
+    print(f"Generating Barrier from {model}")
+    ee_pos_min, ee_pos_max, wb_pos_min, wb_pos_max = barrier.generate_barrier(
+        user_prompt=prompt
+    )
+    print("Barriers Generated: ee:", ee_pos_min, ee_pos_max)
+    print("Barriers Generated: whole body:", wb_pos_min, wb_pos_max)
+
     collision_data = {"positions": collision_pos, "radii": collision_radii}
     config = CombinedConfig(
         robot,
@@ -196,12 +211,26 @@ def main():
         wb_pos_max,
     )
     cbf = CBF.from_config(config)
+    traj = SinusoidalTaskTrajectory(
+        init_pos=iniat_pos,
+        init_rot=np.array(
+            [
+                [1, 0, 0],
+                [0, -1, 0],
+                [0, 0, -1],
+            ]
+        ),
+        amplitude=amplitude,
+        angular_freq=frequency,
+        phase=(0, 0, 0),
+    )
     env = FrankaTorqueControlEnv(
         config.pos_min,
         config.pos_max,
         collision_data=collision_data,
         wb_xyz_min=wb_pos_min,
         wb_xyz_max=wb_pos_max,
+        traj=traj,
         load_floor=False,
         bg_color=(1, 1, 1),
         real_time=True,
@@ -236,12 +265,64 @@ def main():
     def compute_control_jit(z, z_des):
         return compute_control(robot, osc_controller, cbf, z, z_des)
 
-    while True:
+    cameras, pixel_width, pixel_height = vis.get_camera_matrices()
+    images = []
+    for view, proj in cameras:
+        width, height, rgb, depth, seg = env.client.getCameraImage(
+            width=pixel_width,
+            height=pixel_height,
+            viewMatrix=view,
+            projectionMatrix=proj,
+            renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,  # ER_TINY_RENDERER
+        )
+        images.append(rgb)
+
+    vis.plot_views(
+        images,
+        pixel_width,
+        pixel_height,
+        show_plots=True,
+        name="test_mul_saf/mult_img_04_05_init_propmt changes",
+        folder="test_dynamotion_plots",
+        save_image=True,
+    )
+
+    # while True:
+    #     joint_state = env.get_joint_state()
+    #     ee_state_des = env.get_desired_ee_state()
+    #     tau = compute_control_jit(joint_state, ee_state_des)
+    #     env.apply_control(tau)
+    #     env.step()
+
+    duration = 10.0
+    timestep = 1 / 1000
+    n_timestep = int(duration / timestep)
+
+    j_state = []
+    j_state_des = []
+    u_safe = []
+
+    for i in range(n_timestep):
         joint_state = env.get_joint_state()
         ee_state_des = env.get_desired_ee_state()
         tau = compute_control_jit(joint_state, ee_state_des)
         env.apply_control(tau)
         env.step()
+
+        j_state.append(joint_state)
+        j_state_des.append(ee_state_des)
+        u_safe.append(tau)
+
+    ts = duration * np.arange(n_timestep)
+    vis.plot_link_simulations(
+        np.array(j_state),
+        np.array(j_state_des),
+        np.array(u_safe),
+        ts,
+        show_plots=True,
+        save_image=True,
+        name="test_mul_saf/mult_link_04_05_latest_prompt",
+    )
 
 
 if __name__ == "__main__":

@@ -79,6 +79,14 @@ def plot_views(
         axes[label].axis("off")
 
     if save_image:
+        for i, img in enumerate(images):
+            np_img = np.reshape(img, (pixel_height, pixel_width, 4))
+            fig_temp, ax_temp = plt.subplots(figsize=(5, 4), dpi=300)
+            ax_temp.imshow(np_img)
+            ax_temp.axis("off")
+            fig_temp.savefig(f"{name}_{i+1}.pdf", bbox_inches="tight", pad_inches=0)
+            plt.close(fig_temp)
+
         # path = os.path.join(folder, name)
         plt.savefig(name + ".pdf")
         # plt.savefig(path)
@@ -161,64 +169,85 @@ def plot_link_simulations(
     mosaic = [["pos"], ["cmd"], ["err"]]
     fig, axes = plt.subplot_mosaic(mosaic, figsize=(10, 12), sharex=True)
 
+    def _plot_pos(ax):
+        ax.plot(ts, ee_pos_hist[:, 0], label="Current X", color="r", linestyle="-")
+        ax.plot(ts, ee_pos_hist[:, 1], label="Current Y", color="g", linestyle="-")
+        ax.plot(ts, ee_pos_hist[:, 2], label="Current Z", color="b", linestyle="-")
+        ax.plot(
+            ts,
+            ee_des_pos_hist[:, 0],
+            label="Desired X",
+            color="r",
+            linestyle="--",
+            alpha=0.7,
+        )
+        ax.plot(
+            ts,
+            ee_des_pos_hist[:, 1],
+            label="Desired Y",
+            color="g",
+            linestyle="--",
+            alpha=0.7,
+        )
+        ax.plot(
+            ts,
+            ee_des_pos_hist[:, 2],
+            label="Desired Z",
+            color="b",
+            linestyle="--",
+            alpha=0.7,
+        )
+        ax.set_ylabel("Position (m)")
+        ax.set_title("Current and Desired EE Position")
+        ax.legend(ncol=2)
+
+    def _plot_cmd(ax):
+        num_links = u_safe_hist.shape[1]
+        for i in range(num_links):
+            label = names[i] if names is not None else f"Link {i + 1}"
+            ax.plot(ts, u_safe_hist[:, i], label=label)
+        ax.set_ylabel("Control Command")
+        ax.set_title("Safe Control Commands")
+        ax.legend(ncol=4)
+
+    def _plot_err(ax):
+        ax.plot(ts, ee_error[:, 0], label="Error X", color="r")
+        ax.plot(ts, ee_error[:, 1], label="Error Y", color="g")
+        ax.plot(ts, ee_error[:, 2], label="Error Z", color="b")
+        error_norm = np.linalg.norm(ee_error, axis=1)
+        ax.plot(ts, error_norm, label="Error Norm", color="k", linestyle=":")
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Position Error (m)")
+        ax.set_title("Difference Between Task and EE Position")
+        ax.legend()
+
     # Plot 1: EE Position
-    ax_pos = axes["pos"]
-    ax_pos.plot(ts, ee_pos_hist[:, 0], label="Current X", color="r", linestyle="-")
-    ax_pos.plot(ts, ee_pos_hist[:, 1], label="Current Y", color="g", linestyle="-")
-    ax_pos.plot(ts, ee_pos_hist[:, 2], label="Current Z", color="b", linestyle="-")
-    ax_pos.plot(
-        ts,
-        ee_des_pos_hist[:, 0],
-        label="Desired X",
-        color="r",
-        linestyle="--",
-        alpha=0.7,
-    )
-    ax_pos.plot(
-        ts,
-        ee_des_pos_hist[:, 1],
-        label="Desired Y",
-        color="g",
-        linestyle="--",
-        alpha=0.7,
-    )
-    ax_pos.plot(
-        ts,
-        ee_des_pos_hist[:, 2],
-        label="Desired Z",
-        color="b",
-        linestyle="--",
-        alpha=0.7,
-    )
-    ax_pos.set_ylabel("Position (m)")
-    ax_pos.set_title("Current and Desired EE Position")
-    ax_pos.legend(ncol=2)
+    _plot_pos(axes["pos"])
 
     # Plot 2: Safe Command
-    ax_cmd = axes["cmd"]
-    num_links = u_safe_hist.shape[1]
-    for i in range(num_links):
-        label = names[i] if names is not None else f"Link {i + 1}"
-        ax_cmd.plot(ts, u_safe_hist[:, i], label=label)
-    ax_cmd.set_ylabel("Control Command")
-    ax_cmd.set_title("Safe Control Commands")
-    ax_cmd.legend(ncol=4)
+    _plot_cmd(axes["cmd"])
 
     # Plot 3: Error
-    ax_err = axes["err"]
-    ax_err.plot(ts, ee_error[:, 0], label="Error X", color="r")
-    ax_err.plot(ts, ee_error[:, 1], label="Error Y", color="g")
-    ax_err.plot(ts, ee_error[:, 2], label="Error Z", color="b")
-    error_norm = np.linalg.norm(ee_error, axis=1)
-    ax_err.plot(ts, error_norm, label="Error Norm", color="k", linestyle=":")
-    ax_err.set_xlabel("Time (s)")
-    ax_err.set_ylabel("Position Error (m)")
-    ax_err.set_title("Difference Between Task and EE Position")
-    ax_err.legend()
+    _plot_err(axes["err"])
 
     # plt.tight_layout()
 
     if save_image:
+        fig1, ax1 = plt.subplots(figsize=(10, 4))
+        _plot_pos(ax1)
+        fig1.savefig(f"{name}_1.pdf", bbox_inches="tight")
+        plt.close(fig1)
+
+        fig2, ax2 = plt.subplots(figsize=(10, 4))
+        _plot_cmd(ax2)
+        fig2.savefig(f"{name}_2.pdf", bbox_inches="tight")
+        plt.close(fig2)
+
+        fig3, ax3 = plt.subplots(figsize=(10, 4))
+        _plot_err(ax3)
+        fig3.savefig(f"{name}_3.pdf", bbox_inches="tight")
+        plt.close(fig3)
+
         plt.savefig(name + ".pdf")
 
     if show_plots:

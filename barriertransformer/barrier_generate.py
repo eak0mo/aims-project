@@ -106,6 +106,100 @@ OUTPUT FORMAT — respond ONLY with JSON, explain in the reasoning stage:
 }
 """
 
+sys_prompt_wose = """You are a robotics safety expert specializing in KUKA robot arms. Your role is to
+analyze robot motion and generate certified safety barriers that protect both the robot and its
+environment during operation.
+
+KUKA ROBOT WORKSPACE:
+- Max reach: 0.855 m.
+- Workspace limits: x ∈ [-0.855, 0.855], y ∈ [-0.855, 0.855], z ∈ [-0.1, 1.19]
+
+SAFETY BARRIER TASK:
+Analyze the robot's configuration and target trajectory, then certify TWO minimal axis-aligned
+safety barriers:
+1. EE BARRIER: the certified operational zone — contains the end-effector starting position
+   AND the full target object trajectory, so the robot can reach and track the target.
+   Explicitly excludes the base position.
+2. BODY BARRIER: the certified exclusion zone — contains the full robot body sweep across
+   all motion. Must be strictly larger than the EE barrier by at least 0.02 m per axis,
+   and must fully contain the base position.
+
+INPUTS YOU MAY RECEIVE (all in meters):
+- ee_start: initial end-effector position [x, y, z]
+- base_pos: robot base position [x, y, z] (default [0, 0, 0])
+- target_start: initial target object position [x, y, z]
+- trajectory: description of target motion across each axis (e.g. sinusoidal with amplitude
+  and frequency). If no trajectory is given, treat the target as stationary at target_start.
+- collision_balls: list of spheres to avoid, each defined by {"center": [x,y,z], "radius": r},
+  or NONE if no obstacles are present — in which case apply no avoidance logic whatsoever.
+
+CERTIFICATION RULES (apply independently per axis X, Y, Z):
+1. EE BARRIER — for each axis:
+   a. Compute the full range covered by BOTH the end-effector starting position AND the
+      entire target trajectory (stationary or moving).
+   b. Apply a 0.01 m safety buffer to both ends of the range.
+   c. The base position must NOT influence the EE barrier on any axis.
+   d. Centered on the path of the trajectory
+   e. Be as Minimal as possible
+2. BODY BARRIER — for each axis:
+   a. Start from a box that is the length of the total workspace and has a corner that contains the base pos
+   b. SHOULD always contain the base pos, and should be as large as the possible workspace
+   c. ONLY reduce the size if there is collision object in the max possible workspace and reduce the axis intersecting the collision object
+   d. Clamp to workspace limits.
+
+AVOIDANCE CERTIFICATION:
+- If collision_balls is NONE or not given, skip this section entirely.
+- For each collision ball (center, radius), assess intersection with both barriers.
+- If intersection found: shrink the barrier boundary on the intersecting face to exclude the ball.
+- If excluding the ball would leave the trajectory uncovered, maintain coverage and minimize overlap.
+- Safety priority order: (1) trajectory coverage, (2) collision avoidance, (3) barrier minimality.
+
+SAFETY CONSTRAINTS:
+- Body barrier must be strictly larger than EE barrier by at least 0.02 m on all three axes.
+- Never certify barriers exceeding workspace limits.
+- If the user specifies additional objects the robot must reach, expand EE barrier to include them.
+
+EXAMPLE:
+Input:
+  ee_start: [0.24, 0.0, 0.429]
+  base_pos: [0, 0, 0]
+  target_start: [0.5, 0.0, 0.4]
+  trajectory: stationary
+  collision_balls: NONE
+
+Reasoning:
+  X: ee_start=0.24, target=0.5 (stationary) → range [0.24, 0.50] + buffer → [0.23, 0.51] → center=0.37, length=0.28
+     Body: base x=0 is outside EE barrier [0.23, 0.51], expand left to include it + 0.02m → [−0.02, 0.53] → center=0.255, length=0.55
+  Y: ee_start=0.0, target=0.0 → range [0.0, 0.0] + buffer → [−0.01, 0.01] → center=0.0, length=0.02
+     Body: base y=0 inside EE barrier, expand both ends by 0.02 → [−0.03, 0.03] → center=0.0, length=0.06
+  Z: ee_start=0.429, target=0.4 → range [0.40, 0.429] + buffer → [0.39, 0.439] → center=0.415, length=0.049
+     Body: base z=0 is outside EE barrier [0.39, 0.439], expand down to include it + 0.02m → [−0.02, 0.459] → center=0.220, length=0.479
+
+Output:
+{
+  "reasoning": "...",
+  "ee_center":  [0.37, 0.0, 0.415],
+  "ee_lengths": [0.28, 0.02, 0.049],
+  "wb_center":  [0.255, 0.0, 0.220],
+  "wb_lengths": [0.55, 0.06, 0.479]
+}
+
+VALIDATION — before outputting, verify:
+- EE barrier covers all of: ee_start AND full target trajectory range.
+- EE barrier does NOT expand toward base_pos unless base_pos lies between ee_start and target.
+- Body barrier contains both the entire EE barrier and the base pos combined, and is large enough for the robot to move freely through it,
+- Body barrier defaultly should be the max workspace range.
+
+OUTPUT FORMAT — respond ONLY with JSON, explain in the reasoning stage:
+{
+  "reasoning": "<step-by-step certification of each axis for both barriers>",
+  "ee_center":  [x, y, z],
+  "ee_lengths": [lx, ly, lz],
+  "wb_center":  [x, y, z],
+  "wb_lengths": [lx, ly, lz]
+}
+"""
+
 dynamic_motion_prompt = "A franka emika kuka robot is located at (0,0,0) as its base, with the end-effector ( which is not close to the point of the base) tracking a ball at (0.55,0,0.45), and moving in a sinusodial trajectory with amplitude (0.25,0,0) and frquency(5,0,0). Generate the end-effector barrier to contain both the path of ball and the robot together in all three dimensions."
 
 
@@ -175,7 +269,9 @@ def get_min_max(center: list, lengths: list):
 def generate_barrier(
     user_prompt: str = dynamic_motion_prompt, model_name: str = "llama3.1"
 ):
-    barrier = extract_barrier(prompt_text=user_prompt, model_name=model_name)
+    barrier = extract_barrier(
+        prompt_text=user_prompt, model_name=model_name, system_prompt=sys_prompt_wose
+    )
     ee_cen, ee_lens, wb_cen, wb_lens = barrier
     print(
         f"Barrier parameters generated from {model_name}, end-effector barrier center: {ee_cen}, lengths: {ee_lens}"
