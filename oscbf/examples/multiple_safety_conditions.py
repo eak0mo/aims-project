@@ -31,6 +31,8 @@ from oscbf.core.oscbf_configs import OSCBFTorqueConfig
 from oscbf.utils.trajectory import SinusoidalTaskTrajectory
 from oscbf.core.controllers import PoseTaskTorqueController
 
+RECORD_VIDEO = False
+
 
 @jax.tree_util.register_static
 class CombinedConfig(OSCBFTorqueConfig):
@@ -284,7 +286,7 @@ def main():
         show_plots=True,
         name="test_mul_saf/mult_img_04_05_init_propmt changes",
         folder="test_dynamotion_plots",
-        save_image=True,
+        save_image=False,
     )
 
     # while True:
@@ -293,6 +295,12 @@ def main():
     #     tau = compute_control_jit(joint_state, ee_state_des)
     #     env.apply_control(tau)
     #     env.step()
+
+    if RECORD_VIDEO:
+        # for saving the video in the env
+        env.client.startStateLogging(
+            env.client.STATE_LOGGING_VIDEO_MP4, "test_mul_saf/full_int_08_05.mp4"
+        )
 
     duration = 10.0
     timestep = 1 / 1000
