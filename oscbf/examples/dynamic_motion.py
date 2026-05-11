@@ -22,6 +22,7 @@ from jax.typing import ArrayLike
 sys.path.append("././")
 from barriertransformer.barrier_generate import generate_barrier, create_prompt
 from barriertransformer import visualization as vis
+from barriertransformer import metrics as met
 # from package.pack import test
 
 from cbfpy import CBF
@@ -145,7 +146,7 @@ def compute_torque_control(
         c=c,
     )
     # Apply the CBF safety filter
-    return cbf.safety_filter(z, u_nom)
+    return cbf.safety_filter(z, u_nom), u_nom  # added unsafe output
 
 
 # @partial(jax.jit, static_argnums=(0, 1, 2))
@@ -334,9 +335,9 @@ def main(control_method="torque"):
         pixel_width,
         pixel_height,
         show_plots=True,
-        name="test_dymotion_plots/mult_img_04_05_latestprompt_oneshot",
+        name="test_dymotion_plots/mult_img_11_05_test",
         folder="test_dynamotion_plots",
-        save_image=True,
+        save_image=False,
     )
 
     if RECORD_VIDEO:
@@ -357,19 +358,31 @@ def main(control_method="torque"):
     q_hist = []
     q_des_hist = []
     u_safe_hist = []
+    u_unsafe_hist = []
+    h_hist = []
 
     for i in range(num_timestep):
         q_qdot = env.get_joint_state()
         z_zdot_ee_des = env.get_desired_ee_state()
-        tau = compute_control(q_qdot, z_zdot_ee_des)
+        tau, u_unsafe = compute_control(q_qdot, z_zdot_ee_des)
         env.apply_control(tau)
         env.step()
 
         q_hist.append(q_qdot)
         q_des_hist.append(z_zdot_ee_des)
         u_safe_hist.append(tau)
+        u_unsafe_hist.append(u_unsafe)
+
+        if control_method == "torque":
+            h_val = torque_cbf.h_2(z_zdot_ee_des)
+        # elif control_method == "velocity":
+        #     h_val = velocity_cbf.h_np(q_qdot, z_zdot_ee_des)
+        h_hist.append(h_val)
 
     ts = duration * np.arange(num_timestep)
+
+    # print(np.array(h_val).shape)
+    # print(h_hist[-1])
 
     vis.plot_link_simulations(
         np.array(q_hist),
@@ -377,9 +390,70 @@ def main(control_method="torque"):
         np.array(u_safe_hist),
         ts,
         show_plots=True,
-        save_image=True,
-        name="test_dymotion_plots/dynamic_motion_metric_04_05_latestprompt_oneshot",
+        save_image=False,
+        name="test_dymotion_plots/dynamic_motion_metric_11_05_test",
     )
+
+    # """
+    # # --- BEGIN METRICS INTEGRATION EXAMPLE ---
+    # # This block goes after your main simulation loop ends.
+    #
+    # from barriertransformer.metrics import SimulationData, generate_report, compute_mean_abs_torque
+    #
+    # # 1. Prepare data
+    # # Converting lists to JAX arrays to speed up metric computation
+    
+    # Calculate End-Effector trajectory for MTE and SVR metrics
+    q_pos = jnp.array(q_hist)[:, :robot.num_joints]
+    p_actual = jnp.array(jax.vmap(robot.ee_position)(q_pos))
+    p_target = jnp.array(q_des_hist)[:, :3]
+    
+    sim_data = met.SimulationData(
+        dt=timestep,
+        time=ts,
+        q_traj=q_pos,
+        u_actual=jnp.array(u_safe_hist),
+        u_nominal=jnp.array(
+            u_unsafe_hist
+        ),
+        p_actual=p_actual,
+        p_target=p_target,
+        pos_min=pos_min,
+        pos_max=pos_max,
+        wb_min=wb_min,
+        wb_max=wb_max,
+        h_val=jnp.array(h_hist),
+        # Treat the End-Effector position as a 0-radius sphere so SVR tracks if the EE exits the box
+        robot_spheres=p_actual[:, None, :], 
+        sphere_radii=np.array([0.0]),
+        experiment_title="Dynamic_Motion_metric",
+        prompt_version="v1",
+    )
+    #
+    # # 2. Generate CSV Report
+    # # Calls all jitted functions and saves them to 'results/...'
+    met.generate_report(sim_data, output_dir="metrics")
+    #
+    # # 3. Generate Visualizations
+    mean_tau = met.compute_mean_abs_torque(sim_data.u_actual)
+    vis.plot_per_joint_torque(
+        mean_tau,
+        show_plots=True,
+        save_image=True,
+        name="test_dymotion_plots/per_joint_torque_11_05",
+    )
+    #
+    vis.plot_barrier_evolution(
+        time=ts,
+        h_val=sim_data.h_val,
+        u_safe=sim_data.u_actual,
+        u_unsafe=sim_data.u_nominal,
+        show_plots=True,
+        save_image=True,
+        name="test_dymotion_plots/barrier_evolution_11_05",
+    )
+    # # --- END METRICS INTEGRATION EXAMPLE ---
+    # """
 
 
 if __name__ == "__main__":

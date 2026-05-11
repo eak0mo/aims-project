@@ -1,6 +1,14 @@
 # aims-project read-me updates
 
 ## Ollama Integration and tests W3
+11-05
+Added some new metrics and added some visualization of what they mean.
+These are the metrics and what they mean and should signify
+
+
+
+
+
 
 01-05
 Added whole body barriers and collision inputs for the propmt generation, also added a new prompt generations for the list of collision points.
