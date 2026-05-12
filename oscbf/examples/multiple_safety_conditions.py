@@ -22,8 +22,10 @@ from jax.typing import ArrayLike
 from cbfpy import CBF
 
 sys.path.append("././")
+#importing custom library
 from barriertransformer import barrier_generate as barrier
 from barriertransformer import visualization as vis
+from barriertransformer import metrics as met
 
 from oscbf.core.manipulator import Manipulator, load_panda
 from oscbf.core.manipulation_env import FrankaTorqueControlEnv
@@ -164,7 +166,8 @@ def compute_control(
         c=c,
     )
     # Apply the CBF safety filter
-    return cbf.safety_filter(z, u_nom)
+    tau = cbf.safety_filter(z, u_nom)
+    return tau, u_nom
 
 
 def main():
@@ -302,24 +305,31 @@ def main():
             env.client.STATE_LOGGING_VIDEO_MP4, "test_mul_saf/full_int_08_05.mp4"
         )
 
-    duration = 10.0
+    duration = 11.0
     timestep = 1 / 1000
     n_timestep = int(duration / timestep)
 
     j_state = []
     j_state_des = []
     u_safe = []
+    u_unsafe = []
+    h_hist = []
 
     for i in range(n_timestep):
         joint_state = env.get_joint_state()
         ee_state_des = env.get_desired_ee_state()
-        tau = compute_control_jit(joint_state, ee_state_des)
+        tau, u_nom = compute_control_jit(joint_state, ee_state_des)
         env.apply_control(tau)
         env.step()
 
         j_state.append(joint_state)
         j_state_des.append(ee_state_des)
         u_safe.append(tau)
+        u_unsafe.append(u_nom)
+        
+        # Calculate h_val using config.h_2
+        h_val = config.h_2(joint_state)
+        h_hist.append(h_val)
 
     ts = duration * np.arange(n_timestep)
     vis.plot_link_simulations(
@@ -330,6 +340,56 @@ def main():
         show_plots=True,
         save_image=True,
         name="test_mul_saf/mult_link_04_05_latest_prompt",
+    )
+
+    # --- METRICS INTEGRATION SUITE ---
+    q_pos = jnp.array(j_state)[:, :robot.num_joints]
+    p_actual = jnp.array(jax.vmap(robot.ee_position)(q_pos))
+    p_target = jnp.array(j_state_des)[:, :3]
+    
+    # Calculate Whole-Body joint spheres over the trajectory using vmap
+    wb_spheres_data = jnp.array(jax.vmap(robot.link_collision_data)(q_pos))
+    joint_spheres = wb_spheres_data[:, :, :3]
+    joint_sphere_radii = np.array(wb_spheres_data[0, :, 3])
+    
+    sim_data = met.SimulationData(
+        dt=timestep,
+        time=ts,
+        q_traj=q_pos,
+        u_actual=jnp.array(u_safe),
+        u_nominal=jnp.array(u_unsafe),
+        p_actual=p_actual,
+        p_target=p_target,
+        pos_min=ee_pos_min,
+        pos_max=ee_pos_max,
+        wb_min=wb_pos_min,
+        wb_max=wb_pos_max,
+        h_val=jnp.array(h_hist),
+        joint_spheres=joint_spheres,
+        joint_sphere_radii=joint_sphere_radii,
+        collision_spheres=collision_pos,
+        collision_sphere_radii=collision_radii,
+        experiment_title="Multiple_Safety_Conditions",
+        prompt_version="v1",
+    )
+    
+    met.generate_report(sim_data, output_dir="metrics")
+    
+    mean_tau = met.compute_mean_abs_torque(sim_data.u_actual)
+    vis.plot_per_joint_torque(
+        mean_tau,
+        show_plots=True,
+        save_image=True,
+        name="test_mul_saf/per_joint_torque",
+    )
+    vis.plot_barrier_evolution(
+        time=ts,
+        h_val=sim_data.h_val,
+        u_safe=sim_data.u_actual,
+        u_unsafe=sim_data.u_nominal,
+        show_plots=True,
+        save_image=True,
+        name="test_mul_saf/barrier_evolution",
     )
 
 

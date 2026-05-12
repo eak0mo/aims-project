@@ -67,6 +67,7 @@ class EESafeSetTorqueConfig(OSCBFTorqueConfig):
         # added singularlity avoidance from multiple_safety_conditions.py
         sigmas = jax.lax.linalg.svd(self.robot.ee_jacobian(q), compute_uv=False)
         h_singularity = jnp.array([jnp.prod(sigmas) - self.singularity_tol])
+        # print(f"hvals {h_singularity}, {h_ee_safe_set}")
 
         return jnp.concatenate([h_ee_safe_set, h_singularity])
 
@@ -346,7 +347,7 @@ def main(control_method="torque"):
             env.client.STATE_LOGGING_VIDEO_MP4, "test_dymotion_plots/full_int.mp4"
         )
 
-    duration = 10.0
+    duration = 11.0
     num_timestep = int(duration / timestep)
 
     # while True:
@@ -360,6 +361,7 @@ def main(control_method="torque"):
     u_safe_hist = []
     u_unsafe_hist = []
     h_hist = []
+    
 
     for i in range(num_timestep):
         q_qdot = env.get_joint_state()
@@ -378,6 +380,7 @@ def main(control_method="torque"):
         # elif control_method == "velocity":
         #     h_val = velocity_cbf.h_np(q_qdot, z_zdot_ee_des)
         h_hist.append(h_val)
+    print(h_val)
 
     ts = duration * np.arange(num_timestep)
 
@@ -408,6 +411,11 @@ def main(control_method="torque"):
     p_actual = jnp.array(jax.vmap(robot.ee_position)(q_pos))
     p_target = jnp.array(q_des_hist)[:, :3]
     
+    # Calculate Whole-Body joint spheres over the trajectory using vmap
+    wb_spheres_data = jnp.array(jax.vmap(robot.link_collision_data)(q_pos))
+    joint_spheres = wb_spheres_data[:, :, :3]
+    joint_sphere_radii = np.array(wb_spheres_data[0, :, 3])
+    
     sim_data = met.SimulationData(
         dt=timestep,
         time=ts,
@@ -423,9 +431,10 @@ def main(control_method="torque"):
         wb_min=wb_min,
         wb_max=wb_max,
         h_val=jnp.array(h_hist),
-        # Treat the End-Effector position as a 0-radius sphere so SVR tracks if the EE exits the box
-        robot_spheres=p_actual[:, None, :], 
-        sphere_radii=np.array([0.0]),
+        joint_spheres=joint_spheres, 
+        joint_sphere_radii=joint_sphere_radii,
+        collision_spheres=None,
+        collision_sphere_radii=None,
         experiment_title="Dynamic_Motion_metric",
         prompt_version="v1",
     )
@@ -439,7 +448,7 @@ def main(control_method="torque"):
     vis.plot_per_joint_torque(
         mean_tau,
         show_plots=True,
-        save_image=True,
+        save_image=False,
         name="test_dymotion_plots/per_joint_torque_11_05",
     )
     #
@@ -449,7 +458,7 @@ def main(control_method="torque"):
         u_safe=sim_data.u_actual,
         u_unsafe=sim_data.u_nominal,
         show_plots=True,
-        save_image=True,
+        save_image=False,
         name="test_dymotion_plots/barrier_evolution_11_05",
     )
     # # --- END METRICS INTEGRATION EXAMPLE ---

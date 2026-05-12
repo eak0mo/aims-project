@@ -285,8 +285,22 @@ def plot_barrier_evolution(time, h_val, u_safe, u_unsafe, names=None, save_image
     if h_val.ndim > 1:
         min_h_val = np.min(h_val, axis=1)
         unsafe_mask = min_h_val < 0
-        for i in range(h_val.shape[1]):
-            axes["barrier"].plot(time, h_val[:, i], alpha=0.8, linewidth=1.5, label=f"h_{i+1}(t)")
+        num_h = h_val.shape[1]
+        
+        # Select up to 3 preceding evolutions to label in the legend to keep it clean
+        other_indices = []
+        if num_h > 1:
+            if num_h - 1 <= 3:
+                other_indices = list(range(num_h - 1))
+            else:
+                other_indices = [0, (num_h - 2) // 2, num_h - 2]
+                
+        for i in range(num_h):
+            if i == num_h - 1:
+                axes["barrier"].plot(time, h_val[:, i], alpha=1.0, linewidth=2.5, color="#29AF8C", label=f"h_{i+1}(t)")
+            else:
+                lbl = f"h_{i+1}(t)" if i in other_indices else "_nolegend_"
+                axes["barrier"].plot(time, h_val[:, i], alpha=0.5, linewidth=0.8, color="#3D9CCC", label=lbl)
     else:
         min_h_val = h_val
         unsafe_mask = h_val < 0
