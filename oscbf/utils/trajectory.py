@@ -131,3 +131,67 @@ class SinusoidalTaskTrajectory(TaskTrajectory):
 
     def alpha(self, t: float) -> np.ndarray:
         return np.zeros(3)
+
+
+class WaypointTaskTrajectory(TaskTrajectory):
+    """A piecewise linear task-space position trajectory moving through specified waypoints.
+
+    Useful for multi-stage tasks like pick-and-place or pick-and-drop sequences.
+
+    Args:
+        waypoints (np.ndarray): Array of target positions, shape (N, 3)
+        times (np.ndarray): Array of timestamps corresponding to each waypoint, shape (N,)
+        init_rot (np.ndarray): Fixed rotation matrix of the end-effector, shape (3, 3)
+    """
+
+    def __init__(
+        self,
+        waypoints: np.ndarray,
+        times: np.ndarray,
+        init_rot: np.ndarray,
+    ):
+        self.waypoints = np.asarray(waypoints, dtype=float)
+        self.times = np.asarray(times, dtype=float)
+        self.init_rot = np.asarray(init_rot, dtype=float)
+
+        assert self.waypoints.ndim == 2 and self.waypoints.shape[1] == 3, "waypoints must have shape (N, 3)"
+        assert self.times.ndim == 1, "times must be a 1D array"
+        assert len(self.waypoints) == len(self.times), "Number of waypoints must match number of times"
+        assert self.init_rot.shape == (3, 3), "init_rot must have shape (3, 3)"
+        assert np.all(np.diff(self.times) > 0), "times must be strictly increasing"
+
+    def position(self, t: float) -> np.ndarray:
+        if t <= self.times[0]:
+            return self.waypoints[0]
+        if t >= self.times[-1]:
+            return self.waypoints[-1]
+
+        # Find the segment [i, i+1] containing t
+        idx = np.searchsorted(self.times, t, side="right") - 1
+        t0, t1 = self.times[idx], self.times[idx + 1]
+        p0, p1 = self.waypoints[idx], self.waypoints[idx + 1]
+
+        return p0 + (p1 - p0) * ((t - t0) / (t1 - t0))
+
+    def velocity(self, t: float) -> np.ndarray:
+        if t < self.times[0] or t >= self.times[-1]:
+            return np.zeros(3)
+
+        idx = np.searchsorted(self.times, t, side="right") - 1
+        t0, t1 = self.times[idx], self.times[idx + 1]
+        p0, p1 = self.waypoints[idx], self.waypoints[idx + 1]
+
+        return (p1 - p0) / (t1 - t0)
+
+    def acceleration(self, t: float) -> np.ndarray:
+        return np.zeros(3)
+
+    def rotation(self, t: float) -> np.ndarray:
+        return self.init_rot
+
+    def omega(self, t: float) -> np.ndarray:
+        return np.zeros(3)
+
+    def alpha(self, t: float) -> np.ndarray:
+        return np.zeros(3)
+

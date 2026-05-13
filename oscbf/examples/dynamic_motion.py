@@ -29,11 +29,12 @@ from cbfpy import CBF
 from oscbf.core.manipulator import Manipulator, load_panda
 from oscbf.core.manipulation_env import FrankaTorqueControlEnv, FrankaVelocityControlEnv
 from oscbf.core.oscbf_configs import OSCBFTorqueConfig, OSCBFVelocityConfig
-from oscbf.utils.trajectory import SinusoidalTaskTrajectory
+from oscbf.utils.trajectory import SinusoidalTaskTrajectory, WaypointTaskTrajectory
 from oscbf.core.controllers import (
     PoseTaskTorqueController,
     PoseTaskVelocityController,
 )
+from oscbf.utils.visualization import create_box
 
 DATA_DIR = "oscbf/experiments/data/"
 SAVE_DATA = False
@@ -54,6 +55,8 @@ class EESafeSetTorqueConfig(OSCBFTorqueConfig):
         self.pos_min = np.asarray(pos_min)
         self.pos_max = np.asarray(pos_max)
         self.singularity_tol = 1e-3
+        self.q_min = robot.joint_lower_limits
+        self.q_max = robot.joint_upper_limits
         super().__init__(
             robot, compensate_centrifugal_coriolis=compensate_centrifugal_coriolis
         )
@@ -61,6 +64,8 @@ class EESafeSetTorqueConfig(OSCBFTorqueConfig):
     def h_2(self, z, **kwargs):
         q = z[: self.num_joints]
         ee_pos = self.robot.ee_position(q)
+        q_min = jnp.asarray(self.q_min)
+        q_max = jnp.asarray(self.q_max)
         # return jnp.concatenate([self.pos_max - ee_pos, ee_pos - self.pos_min])
         h_ee_safe_set = jnp.concatenate([self.pos_max - ee_pos, ee_pos - self.pos_min])
 
@@ -69,6 +74,10 @@ class EESafeSetTorqueConfig(OSCBFTorqueConfig):
         h_singularity = jnp.array([jnp.prod(sigmas) - self.singularity_tol])
         # print(f"hvals {h_singularity}, {h_ee_safe_set}")
 
+        # Joint Limit Avoidance
+        h_joint_limits = jnp.concatenate([q_max - q, q - q_min])
+
+        # return jnp.concatenate([h_ee_safe_set, h_joint_limits, h_singularity])
         return jnp.concatenate([h_ee_safe_set, h_singularity])
 
     def alpha(self, h):
@@ -210,10 +219,35 @@ def main(control_method="torque"):
     pos_min, pos_max, wb_min, wb_max = generate_barrier(user_prompt=prompt)
     print("Barriers Generated: ee:", pos_min, pos_max)
     print("Barriers Generated: whole body:", wb_min, wb_max)
+    # pos_min = (0.235, -0.26, 0.385)
+    # pos_max = (1.075, 0.26, 0.705)
+    # wb_min = (-0.34, -0.03, -0.019)
+    # wb_max = (0.85, 0.03, 0.46)
 
     # NOTE: This term has a noticeable impact on the performance for this demo.
     # It's often neglected due to computational demands and model error
     compensate_centrifugal_coriolis = False
+
+    # waypoint/pick and drop traj
+    # waypoints = np.array(
+    #     [
+    #         [0.45, -0.5, 0.55],  # t=0.0s: Start above pick location
+    #         [0.45, -0.5, 0.15],  # t=2.0s: Reach down to pick object
+    #         [0.45, -0.5, 0.55],  # t=4.0s: Lift object back up
+    #         [0.45, 0.50, 0.55],  # t=7.0s: Move horizontally above drop location
+    #         [0.45, 0.50, 0.15],  # t=9.0s: Lower down to drop location
+    #     ]
+    # )
+    # # Define the exact timestamp (in seconds) for each waypoint
+    # times = np.array([0.5, 2.0, 4.0, 7.0, 9.0])
+    # # Maintain a constant downward-facing end-effector orientation
+    # init_rot = np.array(
+    #     [
+    #         [1, 0, 0],
+    #         [0, -1, 0],
+    #         [0, 0, -1],
+    #     ]
+    # )
 
     torque_config = EESafeSetTorqueConfig(
         robot,
@@ -237,6 +271,7 @@ def main(control_method="torque"):
         angular_freq=frequency,
         phase=(0, 0, 0),
     )
+    # traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
     timestep = 1 / 1000
     bg_color = (1, 1, 1)
     if control_method == "torque":
@@ -318,6 +353,18 @@ def main(control_method="torque"):
     else:
         raise ValueError(f"Invalid control method: {control_method}")
 
+    # create a box obstacle
+    # create_box(
+    #     pos=[0.60, 0, 0.45],  # Center position [x, y, z] in world frame
+    #     orn=[0, 0, 0, 1],  # Orientation quaternion [x, y, z, w]
+    #     mass=0.0,  # Setting mass=0 makes it a fixed/static object
+    #     sidelengths=[0.1, 0.1, 0.1],  # Dimensions along [x, y, z] axes
+    #     use_collision=True,  # True: Robot physically collides with it in PyBullet
+    #     # False: Purely visual (ghost object)
+    #     rgba=[0.867, 0.016, 0.016, 1],  # Color [R, G, B, Alpha]
+    #     client=env.client,  # Target the active PyBullet client instance
+    # )
+
     cameras, pixel_width, pixel_height = vis.get_camera_matrices()
 
     images = []
@@ -342,7 +389,7 @@ def main(control_method="torque"):
     )
 
     if RECORD_VIDEO:
-        # for saving the video in the env
+        # for saving a live recoding of the simulation from the environment.
         env.client.startStateLogging(
             env.client.STATE_LOGGING_VIDEO_MP4, "test_dymotion_plots/full_int.mp4"
         )
@@ -361,7 +408,6 @@ def main(control_method="torque"):
     u_safe_hist = []
     u_unsafe_hist = []
     h_hist = []
-    
 
     for i in range(num_timestep):
         q_qdot = env.get_joint_state()
@@ -397,33 +443,24 @@ def main(control_method="torque"):
         name="test_dymotion_plots/dynamic_motion_metric_11_05_test",
     )
 
-    # """
-    # # --- BEGIN METRICS INTEGRATION EXAMPLE ---
-    # # This block goes after your main simulation loop ends.
-    #
-    # from barriertransformer.metrics import SimulationData, generate_report, compute_mean_abs_torque
-    #
-    # # 1. Prepare data
     # # Converting lists to JAX arrays to speed up metric computation
-    
+
     # Calculate End-Effector trajectory for MTE and SVR metrics
-    q_pos = jnp.array(q_hist)[:, :robot.num_joints]
+    q_pos = jnp.array(q_hist)[:, : robot.num_joints]
     p_actual = jnp.array(jax.vmap(robot.ee_position)(q_pos))
     p_target = jnp.array(q_des_hist)[:, :3]
-    
+
     # Calculate Whole-Body joint spheres over the trajectory using vmap
     wb_spheres_data = jnp.array(jax.vmap(robot.link_collision_data)(q_pos))
     joint_spheres = wb_spheres_data[:, :, :3]
     joint_sphere_radii = np.array(wb_spheres_data[0, :, 3])
-    
+
     sim_data = met.SimulationData(
         dt=timestep,
         time=ts,
         q_traj=q_pos,
         u_actual=jnp.array(u_safe_hist),
-        u_nominal=jnp.array(
-            u_unsafe_hist
-        ),
+        u_nominal=jnp.array(u_unsafe_hist),
         p_actual=p_actual,
         p_target=p_target,
         pos_min=pos_min,
@@ -431,11 +468,11 @@ def main(control_method="torque"):
         wb_min=wb_min,
         wb_max=wb_max,
         h_val=jnp.array(h_hist),
-        joint_spheres=joint_spheres, 
+        joint_spheres=joint_spheres,
         joint_sphere_radii=joint_sphere_radii,
         collision_spheres=None,
         collision_sphere_radii=None,
-        experiment_title="Dynamic_Motion_metric",
+        experiment_title="Dynamic_Motion_13_05",
         prompt_version="v1",
     )
     #

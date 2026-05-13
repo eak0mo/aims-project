@@ -84,7 +84,7 @@ def plot_views(
             fig_temp, ax_temp = plt.subplots(figsize=(5, 4), dpi=300)
             ax_temp.imshow(np_img)
             ax_temp.axis("off")
-            fig_temp.savefig(f"{name}_{i+1}.pdf", bbox_inches="tight", pad_inches=0)
+            fig_temp.savefig(f"{name}_{i + 1}.pdf", bbox_inches="tight", pad_inches=0)
             plt.close(fig_temp)
 
         # path = os.path.join(folder, name)
@@ -255,15 +255,25 @@ def plot_link_simulations(
 
     return fig, axes
 
-def plot_barrier_evolution(time, h_val, u_safe, u_unsafe, names=None, save_image=False, show_plots=False, name="test_dynamotion_plots/barrier_evolution"):
+
+def plot_barrier_evolution(
+    time,
+    h_val,
+    u_safe,
+    u_unsafe,
+    names=None,
+    save_image=False,
+    show_plots=False,
+    name="test_dynamotion_plots/barrier_evolution",
+):
     set_style()
     mosaic = [["safe"], ["unsafe"], ["barrier"]]
     fig, axes = plt.subplot_mosaic(mosaic, figsize=(10, 12), sharex=True)
-    
+
     u_safe = np.asarray(u_safe)
     u_unsafe = np.asarray(u_unsafe)
     h_val = np.asarray(h_val)
-    
+
     # --- Plot 1: Safe Commands ---
     num_links = u_safe.shape[1]
     for i in range(num_links):
@@ -272,7 +282,7 @@ def plot_barrier_evolution(time, h_val, u_safe, u_unsafe, names=None, save_image
     axes["safe"].set_ylabel("Safe Command")
     axes["safe"].set_title("Safe Control Commands")
     axes["safe"].legend(ncol=4)
-    
+
     # --- Plot 2: Unsafe Commands ---
     for i in range(num_links):
         label = names[i] if names is not None else f"Link {i + 1}"
@@ -280,13 +290,13 @@ def plot_barrier_evolution(time, h_val, u_safe, u_unsafe, names=None, save_image
     axes["unsafe"].set_ylabel("Unsafe Command")
     axes["unsafe"].set_title("Nominal (Unsafe) Control Commands")
     axes["unsafe"].legend(ncol=4)
-    
+
     # --- Plot 3: Barrier Evolution ---
     if h_val.ndim > 1:
         min_h_val = np.min(h_val, axis=1)
         unsafe_mask = min_h_val < 0
         num_h = h_val.shape[1]
-        
+
         # Select up to 3 preceding evolutions to label in the legend to keep it clean
         other_indices = []
         if num_h > 1:
@@ -294,45 +304,81 @@ def plot_barrier_evolution(time, h_val, u_safe, u_unsafe, names=None, save_image
                 other_indices = list(range(num_h - 1))
             else:
                 other_indices = [0, (num_h - 2) // 2, num_h - 2]
-                
+
         for i in range(num_h):
             if i == num_h - 1:
-                axes["barrier"].plot(time, h_val[:, i], alpha=1.0, linewidth=2.5, color="#29AF8C", label=f"h_{i+1}(t)")
+                axes["barrier"].plot(
+                    time,
+                    h_val[:, i],
+                    alpha=1.0,
+                    linewidth=2.5,
+                    color="#32DAA7",
+                    label=f"h_{i + 1}(t)",
+                )
             else:
-                lbl = f"h_{i+1}(t)" if i in other_indices else "_nolegend_"
-                axes["barrier"].plot(time, h_val[:, i], alpha=0.5, linewidth=0.8, color="#3D9CCC", label=lbl)
+                lbl = f"h_{i + 1}(t)" if i in other_indices else "_nolegend_"
+                axes["barrier"].plot(
+                    time,
+                    h_val[:, i],
+                    alpha=0.5,
+                    linewidth=0.8,
+                    color="#3D9CCC",
+                    label=lbl,
+                )
     else:
         min_h_val = h_val
         unsafe_mask = h_val < 0
-        axes["barrier"].plot(time, h_val, label="h(t) (Safety Margin)", color="#29AF8C", linewidth=2)
-        
-    axes["barrier"].axhline(0, color="#C9492C", linestyle="--", label="Const. (h=0)")
-    axes["barrier"].fill_between(time, min_h_val, 0, where=unsafe_mask, color="#C9492C", alpha=0.3, label="Unsafe Reg")
+        axes["barrier"].plot(
+            time, h_val, label="h(t) (Safety Margin)", color="#29AF8C", linewidth=2
+        )
+
+    axes["barrier"].axhline(0, color="#C9492C", linestyle="--", label="h=0")
     
+    # Calculate limits from plotted lines to shade the entire background half-plane uniformly
+    axes["barrier"].autoscale(enable=True, axis="y", tight=False)
+    ymin, ymax = axes["barrier"].get_ylim()
+    
+    axes["barrier"].fill_between(
+        time,
+        ymin,
+        0,
+        color="#C9492C",
+        alpha=0.15,
+        label="Unsafe",
+    )
+    axes["barrier"].set_ylim(ymin, ymax)
+
     axes["barrier"].set_xlabel("Time (s)")
     axes["barrier"].set_ylabel("Barrier Function h(t)")
     axes["barrier"].set_title("Barrier Function h(t) Over Simulation")
     axes["barrier"].legend(loc="center left", bbox_to_anchor=(1.0, 0.5))
-    
+
     if save_image:
         plt.savefig(name + ".pdf", bbox_inches="tight")
     if show_plots:
         plt.show()
     return fig, axes
 
-def plot_per_joint_torque(mean_abs_tau, names=None, save_image=False, show_plots=False, name="test_dynamotion_plots/per_joint_torque"):
+
+def plot_per_joint_torque(
+    mean_abs_tau,
+    names=None,
+    save_image=False,
+    show_plots=False,
+    name="test_dynamotion_plots/per_joint_torque",
+):
     set_style()
     fig, ax = plt.subplots(figsize=(8, 4))
-    
+
     num_joints = len(mean_abs_tau)
     if names is None:
-        names = [f"Joint {i+1}" for i in range(num_joints)]
-        
+        names = [f"Joint {i + 1}" for i in range(num_joints)]
+
     ax.bar(names, mean_abs_tau, color="#7C60C6", alpha=0.8)
-    
+
     ax.set_ylabel("Mean Absolute Torque (Nm)")
     ax.set_title("Per-Joint Mean Absolute Torque")
-    
+
     if save_image:
         plt.savefig(name + ".pdf", bbox_inches="tight")
     if show_plots:
