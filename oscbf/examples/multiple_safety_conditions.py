@@ -305,7 +305,7 @@ def main():
     if RECORD_VIDEO:
         # for saving the video in the env
         env.client.startStateLogging(
-            env.client.STATE_LOGGING_VIDEO_MP4, "test_mul_saf/full_int_08_05.mp4"
+            env.client.STATE_LOGGING_VIDEO_MP4, f"test_mul_saf/{name_date}_video.mp4"
         )
 
     duration = 11.0
@@ -345,7 +345,7 @@ def main():
         name=f"test_mul_saf/{name_date}_links",
     )
 
-    # --- METRICS INTEGRATION SUITE ---
+    # --- METRICS INTEGRATION ---
     q_pos = jnp.array(j_state)[:, : robot.num_joints]
     p_actual = jnp.array(jax.vmap(robot.ee_position)(q_pos))
     p_target = jnp.array(j_state_des)[:, :3]

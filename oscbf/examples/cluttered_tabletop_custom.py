@@ -36,7 +36,7 @@ from barriertransformer import visualization as vis
 from barriertransformer import metrics as met
 
 name_date = "cus_cluttered_14_05"
-SHOW_PLOTS = False
+SHOW_PLOTS = True
 SAVE_DATA = False
 RECORD_VIDEO = False
 
@@ -51,15 +51,40 @@ class CollisionsConfig(OSCBFTorqueConfig):
         z_min: float,
         collision_positions: ArrayLike,
         collision_radii: ArrayLike,
+        # adding CBF barriers and other details
+        pos_min: ArrayLike,
+        pos_max: ArrayLike,
+        whole_body_pos_min: ArrayLike,
+        whole_body_pos_max: ArrayLike,
     ):
         self.z_min = z_min
         self.collision_positions = np.atleast_2d(collision_positions)
         self.collision_radii = np.ravel(collision_radii)
+        self.pos_min = np.array(pos_min)
+        self.pos_max = np.array(pos_max)
+        self.q_min = robot.joint_lower_limits
+        self.q_max = robot.joint_upper_limits
+        self.singularity_tol = 1e-3
+        self.whole_body_pos_min = np.asarray(whole_body_pos_min)
+        self.whole_body_pos_max = np.asarray(whole_body_pos_max)
         super().__init__(robot)
 
     def h_2(self, z, **kwargs):
         # Extract values
         q = z[: self.num_joints]
+        ee_pos = self.robot.ee_position(q)
+        q_min = jnp.asarray(self.q_min)
+        q_max = jnp.asarray(self.q_max)
+
+        # EE safe containment
+        h_ee_safe_Set = jnp.concatenate([self.pos_max - ee_pos, ee_pos - self.pos_min])
+
+        # joint Limit Avoidance
+        h_joint_limits = jnp.concatenate([q_max - q, q - q_min])
+
+        # singularity avoidance
+        sigmas = jax.lax.linalg.svd(self.robot.ee_jacobian(q), compute_uv=False)
+        h_singularity = jnp.array([jnp.prod(sigmas) - self.singularity_tol])
 
         # Collision Avoidance
         robot_collision_pos_rad = self.robot.link_collision_data(q)
@@ -78,7 +103,31 @@ class CollisionsConfig(OSCBFTorqueConfig):
             robot_collision_positions[:, 2] - self.z_min - robot_collision_radii.ravel()
         )
 
-        return jnp.concatenate([h_collision, h_table])
+        # Whole-body safe containment
+        robot_num_pts = robot_collision_positions.shape[0]
+        h_whole_body_upper = (
+            jnp.tile(self.whole_body_pos_max, (robot_num_pts, 1))
+            - robot_collision_positions
+            - robot_collision_radii
+        ).ravel()
+        h_whole_body_lower = (
+            robot_collision_positions
+            - jnp.tile(self.whole_body_pos_min, (robot_num_pts, 1))
+            - robot_collision_radii
+        ).ravel()
+
+        # return jnp.concatenate([h_collision, h_table])
+        return jnp.concatenate(
+            [
+                h_ee_safe_Set,
+                h_joint_limits,
+                h_singularity,
+                h_collision,
+                h_table,
+                h_whole_body_upper,
+                h_whole_body_lower,
+            ]
+        )
 
     def alpha(self, h):
         return 10.0 * h
@@ -176,7 +225,8 @@ def compute_torque_control(
         c=c,
     )
     # Apply the CBF safety filter
-    return cbf.safety_filter(z, u_nom)
+    u_saf = cbf.safety_filter(z, u_nom)
+    return u_saf, u_nom
 
 
 # @partial(jax.jit, static_argnums=(0, 1, 2))
@@ -213,19 +263,19 @@ def compute_velocity_control(
     return cbf.safety_filter(q, u_nom)
 
 
-def main(control_method="torque", num_bodies=25):
+def main(control_method="torque", num_bodies=3):
     assert control_method in ["torque", "velocity"]
 
     robot = load_panda()
     z_min = 0.1
 
-    max_num_bodies = 3
+    max_num_bodies = 5
 
     # Sample a lot of collision bodies
     all_collision_pos = np.random.uniform(
         low=[0.2, -0.4, 0.1], high=[0.8, 0.4, 0.3], size=(max_num_bodies, 3)
     )
-    all_collision_radii = np.random.uniform(low=0.01, high=0.1, size=(max_num_bodies,))
+    all_collision_radii = np.random.uniform(low=0.07, high=0.1, size=(max_num_bodies,))
     # Only use a subset of them based on the desired quantity
     collision_pos = np.atleast_2d(all_collision_pos[:num_bodies])
     collision_radii = all_collision_radii[:num_bodies]
@@ -233,8 +283,82 @@ def main(control_method="torque", num_bodies=25):
     # print(collision_radii)
     collision_data = {"positions": collision_pos, "radii": collision_radii}
 
-    torque_config = CollisionsConfig(robot, z_min, collision_pos, collision_radii)
+    iniat_pos = (0.4, 0, 0.35)
+    amplitude = (0, 0.25, -0.15)
+    frequency = (0, 5, 2.5)
+
+    # waypoint/pick and drop traj
+    # waypoints = np.array(
+    #     [
+    #         [0.45, -0.5, 0.55],  # t=0.0s: Start above pick location
+    #         [0.45, -0.5, 0.15],  # t=2.0s: Reach down to pick object
+    #         [0.45, -0.5, 0.55],  # t=4.0s: Lift object back up
+    #         [0.45, 0.50, 0.55],  # t=7.0s: Move horizontally above drop location
+    #         [0.45, 0.50, 0.15],  # t=9.0s: Lower down to drop location
+    #     ]
+    # )
+    # # Define the exact timestamp (in seconds) for each waypoint
+    # times = np.array([0.5, 2.0, 4.0, 7.0, 9.0])
+    # # Maintain a constant downward-facing end-effector orientation
+    # init_rot = np.array(
+    #     [
+    #         [1, 0, 0],
+    #         [0, -1, 0],
+    #         [0, 0, -1],
+    #     ]
+    # )
+
+    prompt = barrier.create_prompt_col(
+        ([0, 0, 0]),
+        ([0.240, -0.000, 0.429]),
+        iniat_pos,
+        amplitude,
+        frequency,
+        collision_pos.tolist(),
+        collision_radii,
+    )
+
+    ee_pos_min = np.array([0.15, -0.25, 0.25])
+    ee_pos_max = np.array([0.75, 0.25, 0.75])
+    wb_pos_min = np.array([-0.5, -0.5, 0.0])
+    wb_pos_max = np.array([0.75, 0.5, 1.0])
+
+    # llm outputs
+    # model = "llama3.1"
+    # print(f"Generating Barrier from {model}")
+    # ee_pos_min, ee_pos_max, wb_pos_min, wb_pos_max = barrier.generate_barrier(
+    #     user_prompt=prompt
+    # )
+    # print("Barriers Generated: ee:", ee_pos_min, ee_pos_max)
+    # print("Barriers Generated: whole body:", wb_pos_min, wb_pos_max)
+
+    torque_config = CollisionsConfig(
+        robot,
+        z_min,
+        collision_pos,
+        collision_radii,
+        ee_pos_min,
+        ee_pos_max,
+        wb_pos_min,
+        wb_pos_max,
+    )
     torque_cbf = CBF.from_config(torque_config)
+    traj = SinusoidalTaskTrajectory(
+        init_pos=iniat_pos,
+        init_rot=np.array(
+            [
+                [1, 0, 0],
+                [0, -1, 0],
+                [0, 0, -1],
+            ]
+        ),
+        amplitude=amplitude,
+        angular_freq=frequency,
+        phase=(0, 0, 0),
+    )
+    # traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
+
+    # velocity configs
     velocity_config = CollisionsVelocityConfig(
         robot, z_min, collision_pos, collision_radii
     )
@@ -250,6 +374,11 @@ def main(control_method="torque", num_bodies=25):
             timestep=timestep,
             collision_data=collision_data,
             load_table=True,
+            xyz_min=torque_config.pos_min,
+            xyz_max=torque_config.pos_max,
+            wb_xyz_min=torque_config.whole_body_pos_min,
+            wb_xyz_max=torque_config.whole_body_pos_max,
+            traj=traj,
         )
     else:
         env = FrankaVelocityControlEnv(
@@ -260,6 +389,18 @@ def main(control_method="torque", num_bodies=25):
             collision_data=collision_data,
             load_table=True,
         )
+
+    # create a box obstacle
+    create_box(
+        pos=[0.4, 0.3, 0.55],  # Center position [x, y, z] in world frame
+        orn=[0, 0, 0, 1],  # Orientation quaternion [x, y, z, w]
+        mass=0.0,  # Setting mass=0 makes it a fixed/static object
+        sidelengths=[0.2, 0.2, 0.2],  # Dimensions along [x, y, z] axes
+        use_collision=True,  # True: Robot physically collides with it in PyBullet
+        # False: Purely visual (ghost object)
+        rgba=[0.867, 0.016, 0.016, 1],  # Color [R, G, B, Alpha]
+        client=env.client,  # Target the active PyBullet client instance
+    )
 
     env.client.resetDebugVisualizerCamera(
         cameraDistance=1.40,
@@ -313,13 +454,129 @@ def main(control_method="torque", num_bodies=25):
         compute_control = compute_velocity_control_jit
     else:
         raise ValueError(f"Invalid control method: {control_method}")
-        
-    while True:
+
+    # old main loop
+    # while True:
+    #     q_qdot = env.get_joint_state()
+    #     z_zdot_ee_des = env.get_desired_ee_state()
+    #     tau = compute_control(q_qdot, z_zdot_ee_des)
+    #     env.apply_control(tau)
+    #     env.step()
+
+    cameras, pixel_width, pixel_height = vis.get_camera_matrices()
+    images = []
+    for view, proj in cameras:
+        width, height, rgb, depth, seg = env.client.getCameraImage(
+            width=pixel_width,
+            height=pixel_height,
+            viewMatrix=view,
+            projectionMatrix=proj,
+            renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,  # ER_TINY_RENDERER
+        )
+        images.append(rgb)
+
+    vis.plot_views(
+        images,
+        pixel_width,
+        pixel_height,
+        show_plots=SHOW_PLOTS,
+        name=f"tabletop/{name_date}_cam",
+        folder="tabletop",
+        save_image=SAVE_DATA,
+    )
+
+    if RECORD_VIDEO:
+        env.client.startStateLogging(
+            env.client.STATE_LOGGING_VIDEO_MP4, f"tabletop/{name_date}_video.mp4"
+        )
+
+    duration = 11.0
+    # timestep = 1 / 1000
+    n_timestep = int(duration / timestep)
+
+    j_state = []
+    j_state_des = []
+    u_unsafe = []
+    u_safe = []
+    h_hist = []
+
+    for i in range(n_timestep):
         q_qdot = env.get_joint_state()
         z_zdot_ee_des = env.get_desired_ee_state()
-        tau = compute_control(q_qdot, z_zdot_ee_des)
+        tau, tau_unsafe = compute_control(q_qdot, z_zdot_ee_des)
         env.apply_control(tau)
         env.step()
+
+        j_state.append(q_qdot)
+        j_state_des.append(z_zdot_ee_des)
+        u_safe.append(tau)
+        u_unsafe.append(tau_unsafe)
+
+        h_val = torque_config.h_2(q_qdot)
+        h_hist.append(h_val)
+
+    ts = duration * np.arange(n_timestep)
+
+    vis.plot_link_simulations(
+        np.array(j_state),
+        np.array(j_state_des),
+        np.array(u_safe),
+        ts,
+        show_plots=SHOW_PLOTS,
+        save_image=SAVE_DATA,
+        name=f"tabletop/{name_date}_links",
+    )
+
+    # metrics
+    q_pos = jnp.array(j_state)[:, : robot.num_joints]
+    p_actual = jnp.array(jax.vmap(robot.ee_position)(q_pos))
+    p_target = jnp.array(j_state_des)[:, :3]
+
+    # Calculate Whole-Body joint spheres over the trajectory using vmap
+    wb_spheres_data = jnp.array(jax.vmap(robot.link_collision_data)(q_pos))
+    joint_spheres = wb_spheres_data[:, :, :3]
+    joint_sphere_radii = np.array(wb_spheres_data[0, :, 3])
+
+    sim_data = met.SimulationData(
+        dt=timestep,
+        time=ts,
+        q_traj=q_pos,
+        u_actual=jnp.array(u_safe),
+        u_nominal=jnp.array(u_unsafe),
+        p_actual=p_actual,
+        p_target=p_target,
+        pos_min=ee_pos_min,
+        pos_max=ee_pos_max,
+        wb_min=wb_pos_min,
+        wb_max=wb_pos_max,
+        h_val=jnp.array(h_hist),
+        joint_spheres=joint_spheres,
+        joint_sphere_radii=joint_sphere_radii,
+        collision_spheres=collision_pos,
+        collision_sphere_radii=collision_radii,
+        experiment_title="Cluttered_Tabletop_Custom",
+        prompt_version="v1",
+    )
+
+    if SAVE_DATA:
+        met.generate_report(sim_data, output_dir="metrics")
+
+    mean_tau = met.compute_mean_abs_torque(sim_data.u_actual)
+    vis.plot_per_joint_torque(
+        mean_tau,
+        show_plots=SHOW_PLOTS,
+        save_image=SAVE_DATA,
+        name=f"tabletop/{name_date}_jtorque",
+    )
+    vis.plot_barrier_evolution(
+        time=ts,
+        h_val=sim_data.h_val,
+        u_safe=sim_data.u_actual,
+        u_unsafe=sim_data.u_nominal,
+        show_plots=SHOW_PLOTS,
+        save_image=SAVE_DATA,
+        name=f"tabletop/{name_date}_hevolve",
+    )
 
 
 if __name__ == "__main__":
@@ -336,7 +593,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_bodies",
         type=int,
-        default=25,
+        default=3,
         help="Number of collision bodies to simulate (default: 25)",
     )
     args = parser.parse_args()
