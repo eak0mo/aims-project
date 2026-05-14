@@ -37,6 +37,8 @@ from oscbf.core.controllers import (
 from oscbf.utils.visualization import create_box
 
 DATA_DIR = "oscbf/experiments/data/"
+SHOW_IMAGES = True
+name_date = "dynamic_motion_14_05"
 SAVE_DATA = False
 PAUSE_FOR_PICTURES = False
 RECORD_VIDEO = False
@@ -382,16 +384,16 @@ def main(control_method="torque"):
         images,
         pixel_width,
         pixel_height,
-        show_plots=True,
-        name="test_dymotion_plots/mult_img_11_05_test",
+        show_plots=SHOW_IMAGES,
+        name=f"test_dymotion_plots/{name_date}",
         folder="test_dynamotion_plots",
-        save_image=False,
+        save_image=SAVE_DATA,
     )
 
     if RECORD_VIDEO:
         # for saving a live recoding of the simulation from the environment.
         env.client.startStateLogging(
-            env.client.STATE_LOGGING_VIDEO_MP4, "test_dymotion_plots/full_int.mp4"
+            env.client.STATE_LOGGING_VIDEO_MP4, f"test_dymotion_plots/{name_date}.mp4"
         )
 
     duration = 11.0
@@ -438,9 +440,9 @@ def main(control_method="torque"):
         np.array(q_des_hist),
         np.array(u_safe_hist),
         ts,
-        show_plots=True,
-        save_image=False,
-        name="test_dymotion_plots/dynamic_motion_metric_11_05_test",
+        show_plots=SHOW_IMAGES,
+        save_image=SAVE_DATA,
+        name=f"test_dymotion_plots/{name_date}_links",
     )
 
     # # Converting lists to JAX arrays to speed up metric computation
@@ -472,21 +474,22 @@ def main(control_method="torque"):
         joint_sphere_radii=joint_sphere_radii,
         collision_spheres=None,
         collision_sphere_radii=None,
-        experiment_title="Dynamic_Motion_13_05",
+        experiment_title="Dynamic_Motion_14_05",
         prompt_version="v1",
     )
     #
     # # 2. Generate CSV Report
     # # Calls all jitted functions and saves them to 'results/...'
-    met.generate_report(sim_data, output_dir="metrics")
+    if SAVE_DATA:
+        met.generate_report(sim_data, output_dir="metrics")
     #
     # # 3. Generate Visualizations
     mean_tau = met.compute_mean_abs_torque(sim_data.u_actual)
     vis.plot_per_joint_torque(
         mean_tau,
-        show_plots=True,
-        save_image=False,
-        name="test_dymotion_plots/per_joint_torque_11_05",
+        show_plots=SHOW_IMAGES,
+        save_image=SAVE_DATA,
+        name=f"test_dymotion_plots/{name_date}_jtorque",
     )
     #
     vis.plot_barrier_evolution(
@@ -494,9 +497,9 @@ def main(control_method="torque"):
         h_val=sim_data.h_val,
         u_safe=sim_data.u_actual,
         u_unsafe=sim_data.u_nominal,
-        show_plots=True,
-        save_image=False,
-        name="test_dymotion_plots/barrier_evolution_11_05",
+        show_plots=SHOW_IMAGES,
+        save_image=SAVE_DATA,
+        name=f"test_dymotion_plots/{name_date}_hevolve",
     )
     # # --- END METRICS INTEGRATION EXAMPLE ---
     # """

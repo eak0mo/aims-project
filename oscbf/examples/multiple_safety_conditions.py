@@ -22,7 +22,7 @@ from jax.typing import ArrayLike
 from cbfpy import CBF
 
 sys.path.append("././")
-#importing custom library
+# importing custom library
 from barriertransformer import barrier_generate as barrier
 from barriertransformer import visualization as vis
 from barriertransformer import metrics as met
@@ -34,6 +34,9 @@ from oscbf.utils.trajectory import SinusoidalTaskTrajectory
 from oscbf.core.controllers import PoseTaskTorqueController
 
 RECORD_VIDEO = False
+SAVE_DATA = False
+SHOW_IMAGES = True
+name_date = "mult_saf_con_14_0.5"
 
 
 @jax.tree_util.register_static
@@ -286,10 +289,10 @@ def main():
         images,
         pixel_width,
         pixel_height,
-        show_plots=True,
-        name="test_mul_saf/mult_img_04_05_init_propmt changes",
+        show_plots=SHOW_IMAGES,
+        name=f"test_mul_saf/{name_date}",
         folder="test_dynamotion_plots",
-        save_image=False,
+        save_image=SAVE_DATA,
     )
 
     # while True:
@@ -326,7 +329,7 @@ def main():
         j_state_des.append(ee_state_des)
         u_safe.append(tau)
         u_unsafe.append(u_nom)
-        
+
         # Calculate h_val using config.h_2
         h_val = config.h_2(joint_state)
         h_hist.append(h_val)
@@ -337,21 +340,21 @@ def main():
         np.array(j_state_des),
         np.array(u_safe),
         ts,
-        show_plots=True,
-        save_image=True,
-        name="test_mul_saf/mult_link_04_05_latest_prompt",
+        show_plots=SHOW_IMAGES,
+        save_image=SAVE_DATA,
+        name=f"test_mul_saf/{name_date}_links",
     )
 
     # --- METRICS INTEGRATION SUITE ---
-    q_pos = jnp.array(j_state)[:, :robot.num_joints]
+    q_pos = jnp.array(j_state)[:, : robot.num_joints]
     p_actual = jnp.array(jax.vmap(robot.ee_position)(q_pos))
     p_target = jnp.array(j_state_des)[:, :3]
-    
+
     # Calculate Whole-Body joint spheres over the trajectory using vmap
     wb_spheres_data = jnp.array(jax.vmap(robot.link_collision_data)(q_pos))
     joint_spheres = wb_spheres_data[:, :, :3]
     joint_sphere_radii = np.array(wb_spheres_data[0, :, 3])
-    
+
     sim_data = met.SimulationData(
         dt=timestep,
         time=ts,
@@ -369,27 +372,28 @@ def main():
         joint_sphere_radii=joint_sphere_radii,
         collision_spheres=collision_pos,
         collision_sphere_radii=collision_radii,
-        experiment_title="Multiple_Safety_Conditions",
+        experiment_title="Multiple_Safety_Conditions_14_05",
         prompt_version="v1",
     )
-    
-    met.generate_report(sim_data, output_dir="metrics")
-    
+
+    if SAVE_DATA:
+        met.generate_report(sim_data, output_dir="metrics")
+
     mean_tau = met.compute_mean_abs_torque(sim_data.u_actual)
     vis.plot_per_joint_torque(
         mean_tau,
-        show_plots=True,
-        save_image=True,
-        name="test_mul_saf/per_joint_torque",
+        show_plots=SHOW_IMAGES,
+        save_image=SAVE_DATA,
+        name=f"test_mul_saf/{name_date}_jtorque",
     )
     vis.plot_barrier_evolution(
         time=ts,
         h_val=sim_data.h_val,
         u_safe=sim_data.u_actual,
         u_unsafe=sim_data.u_nominal,
-        show_plots=True,
-        save_image=True,
-        name="test_mul_saf/barrier_evolution",
+        show_plots=SHOW_IMAGES,
+        save_image=SAVE_DATA,
+        name=f"test_mul_saf/{name_date}_hevolve",
     )
 
 

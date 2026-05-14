@@ -1,7 +1,11 @@
 # aims-project read-me updates
 
 ## Metrics addition and evaluation W5 
-11-05
+13-05 
+added a custom pick and drop trajectory
+
+
+11-05 to 12-05
 
 Added some new metrics and added some visualization of what they mean.
 
