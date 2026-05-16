@@ -275,86 +275,110 @@ def plot_barrier_evolution(
     h_val = np.asarray(h_val)
 
     # --- Plot 1: Safe Commands ---
-    num_links = u_safe.shape[1]
-    for i in range(num_links):
-        label = names[i] if names is not None else f"Link {i + 1}"
-        axes["safe"].plot(time, u_safe[:, i], label=label)
-    axes["safe"].set_ylabel("Safe Command")
-    axes["safe"].set_title("Safe Control Commands")
-    axes["safe"].legend(ncol=4)
+    def _plot_safe(ax):
+        num_links = u_safe.shape[1]
+        for i in range(num_links):
+            label = names[i] if names is not None else f"Link {i + 1}"
+            ax.plot(time, u_safe[:, i], label=label)
+        ax.set_ylabel("Safe Command")
+        ax.set_title("Safe Control Commands")
+        ax.legend(ncol=4)
 
     # --- Plot 2: Unsafe Commands ---
-    for i in range(num_links):
-        label = names[i] if names is not None else f"Link {i + 1}"
-        axes["unsafe"].plot(time, u_unsafe[:, i], label=label, linestyle="--")
-    axes["unsafe"].set_ylabel("Unsafe Command")
-    axes["unsafe"].set_title("Nominal (Unsafe) Control Commands")
-    axes["unsafe"].legend(ncol=4)
+    def _plot_unsafe(ax):
+        num_links = u_unsafe.shape[1]
+        for i in range(num_links):
+            label = names[i] if names is not None else f"Link {i + 1}"
+            ax.plot(time, u_unsafe[:, i], label=label, linestyle="--")
+        ax.set_ylabel("Unsafe Command")
+        ax.set_title("Nominal (Unsafe) Control Commands")
+        ax.legend(ncol=4)
 
     # --- Plot 3: Barrier Evolution ---
-    if h_val.ndim > 1:
-        min_h_val = np.min(h_val, axis=1)
-        unsafe_mask = min_h_val < 0
-        num_h = h_val.shape[1]
+    def _plot_barrier(ax):
+        if h_val.ndim > 1:
+            min_h_val = np.min(h_val, axis=1)
+            unsafe_mask = min_h_val < 0
+            num_h = h_val.shape[1]
 
-        # Select up to 3 preceding evolutions to label in the legend to keep it clean
-        other_indices = []
-        if num_h > 1:
-            if num_h - 1 <= 3:
-                other_indices = list(range(num_h - 1))
-            else:
-                other_indices = [0, (num_h - 2) // 2, num_h - 2]
+            # Select up to 3 preceding evolutions to label in the legend to keep it clean
+            other_indices = []
+            if num_h > 1:
+                if num_h - 1 <= 3:
+                    other_indices = list(range(num_h - 1))
+                else:
+                    other_indices = [0, (num_h - 2) // 2, num_h - 2]
 
-        for i in range(num_h):
-            if i == num_h - 1:
-                axes["barrier"].plot(
-                    time,
-                    h_val[:, i],
-                    alpha=1.0,
-                    linewidth=2.5,
-                    color="#32DAA7",
-                    label=f"h_{i + 1}(t)",
-                )
-            else:
-                lbl = f"h_{i + 1}(t)" if i in other_indices else "_nolegend_"
-                axes["barrier"].plot(
-                    time,
-                    h_val[:, i],
-                    alpha=0.5,
-                    linewidth=0.8,
-                    color="#3D9CCC",
-                    label=lbl,
-                )
-    else:
-        min_h_val = h_val
-        unsafe_mask = h_val < 0
-        axes["barrier"].plot(
-            time, h_val, label="h(t) (Safety Margin)", color="#29AF8C", linewidth=2
+            for i in range(num_h):
+                if i == num_h - 1:
+                    ax.plot(
+                        time,
+                        h_val[:, i],
+                        alpha=1.0,
+                        linewidth=2.5,
+                        color="#32DAA7",
+                        label=f"h_{i + 1}(t)",
+                    )
+                else:
+                    lbl = f"h_{i + 1}(t)" if i in other_indices else "_nolegend_"
+                    ax.plot(
+                        time,
+                        h_val[:, i],
+                        alpha=0.5,
+                        linewidth=0.8,
+                        color="#3D9CCC",
+                        label=lbl,
+                    )
+        else:
+            min_h_val = h_val
+            unsafe_mask = h_val < 0
+            ax.plot(
+                time, h_val, label="h(t) (Safety Margin)", color="#29AF8C", linewidth=2
+            )
+
+        ax.axhline(0, color="#C9492C", linestyle="--", label="h=0")
+        
+        # Calculate limits from plotted lines to shade the entire background half-plane uniformly
+        ax.autoscale(enable=True, axis="y", tight=False)
+        ymin, ymax = ax.get_ylim()
+        
+        ax.fill_between(
+            time,
+            ymin,
+            0,
+            color="#C9492C",
+            alpha=0.15,
+            label="Unsafe",
         )
+        ax.set_ylim(ymin, ymax)
 
-    axes["barrier"].axhline(0, color="#C9492C", linestyle="--", label="h=0")
-    
-    # Calculate limits from plotted lines to shade the entire background half-plane uniformly
-    axes["barrier"].autoscale(enable=True, axis="y", tight=False)
-    ymin, ymax = axes["barrier"].get_ylim()
-    
-    axes["barrier"].fill_between(
-        time,
-        ymin,
-        0,
-        color="#C9492C",
-        alpha=0.15,
-        label="Unsafe",
-    )
-    axes["barrier"].set_ylim(ymin, ymax)
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Barrier Function h(t)")
+        ax.set_title("Barrier Function h(t) Over Simulation")
+        ax.legend(loc="center left", bbox_to_anchor=(1.0, 0.5))
 
-    axes["barrier"].set_xlabel("Time (s)")
-    axes["barrier"].set_ylabel("Barrier Function h(t)")
-    axes["barrier"].set_title("Barrier Function h(t) Over Simulation")
-    axes["barrier"].legend(loc="center left", bbox_to_anchor=(1.0, 0.5))
+    _plot_safe(axes["safe"])
+    _plot_unsafe(axes["unsafe"])
+    _plot_barrier(axes["barrier"])
 
     if save_image:
+        fig1, ax1 = plt.subplots(figsize=(10, 4))
+        _plot_safe(ax1)
+        fig1.savefig(f"{name}_safe.pdf", bbox_inches="tight")
+        plt.close(fig1)
+
+        fig2, ax2 = plt.subplots(figsize=(10, 4))
+        _plot_unsafe(ax2)
+        fig2.savefig(f"{name}_unsafe.pdf", bbox_inches="tight")
+        plt.close(fig2)
+
+        fig3, ax3 = plt.subplots(figsize=(10, 4))
+        _plot_barrier(ax3)
+        fig3.savefig(f"{name}_h_val.pdf", bbox_inches="tight")
+        plt.close(fig3)
+
         plt.savefig(name + ".pdf", bbox_inches="tight")
+        
     if show_plots:
         plt.show()
     return fig, axes

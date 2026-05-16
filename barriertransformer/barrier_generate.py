@@ -236,6 +236,33 @@ def create_prompt_col(
     return prompt
 
 
+# add collision prompts for the two kinds of collision objects
+def create_prompt_coll_two(
+    base_pos,
+    ee_pos,
+    targ_pos,
+    targ_amp,
+    targ_freq,
+    coll_cen,
+    coll_rad,
+    cus_col_cen,
+    cus_col_rad,
+):
+    prompt = f"""
+    A franka emika kuka robot is loaded into the environment with it's base at: {base_pos}. 
+    The end-effector  is located at {ee_pos}, and it is tracking a ball starting at {targ_pos}, 
+    and moving in a sinusodial trajectory with amplitude {targ_amp} and angular frequency {targ_freq}. 
+    There are spherical obstacle or obstacles located at "{coll_cen}" with radius "{coll_rad}".
+    These obstancles can be one or many in number. Avoid them as much as possible.
+    Additionally there is an additional collision object located at {cus_col_cen} with radius {cus_col_rad}, 
+    this will not be avoided by the CBF so ensure that the barrier generate AVOIDS this collision object. 
+    If the target passes through the obstacle, restrict the motion to the edges of the obstacles.
+    Generate a barrier that contains both the path of ball and the robot together in all three dimensions. 
+    Make use of information given in the system prompt in designing this barrier
+    """
+    return prompt
+
+
 def extract_barrier(
     prompt_text: str = dynamic_motion_prompt,
     system_prompt: str = sys_prompt,

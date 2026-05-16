@@ -38,7 +38,7 @@ from oscbf.utils.visualization import create_box
 
 DATA_DIR = "oscbf/experiments/data/"
 SHOW_IMAGES = True
-name_date = "dynamic_motion_14_05"
+name_date = "dynamic_motion_15_05"
 SAVE_DATA = False
 PAUSE_FOR_PICTURES = False
 RECORD_VIDEO = False
