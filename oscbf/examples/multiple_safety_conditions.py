@@ -180,20 +180,31 @@ def main():
     # wb_pos_min = np.array([-0.5, -0.5, 0.0])
     # wb_pos_max = np.array([0.75, 0.5, 1.0])
 
+    ee_init_pos = (0.240, -0.000, 0.429)
+
     collision_pos = np.array([[0.5, 0.5, 0.5]])
     collision_radii = np.array([0.3])
 
-    iniat_pos = (0.4, 0, 0.35)
+    sinusoid_init_pos = (0.4, 0, 0.35)
     amplitude = (0, 0.25, 0)
     frequency = (0, 5, 0)
 
+    # prompt = barrier.create_prompt_col(
+    #     ([0, 0, 0]),
+    #     ([0.240, -0.000, 0.429]),
+    #     sinusoid_init_pos,
+    #     amplitude,
+    #     frequency,
+    #     collision_pos.tolist(),
+    #     collision_radii,
+    # )
+
     prompt = barrier.create_prompt_col(
-        ([0, 0, 0]),
-        ([0.240, -0.000, 0.429]),
-        iniat_pos,
+        ee_init_pos,
+        sinusoid_init_pos,
         amplitude,
         frequency,
-        collision_pos.tolist(),
+        collision_pos,
         collision_radii,
     )
 
@@ -220,7 +231,7 @@ def main():
     )
     cbf = CBF.from_config(config)
     traj = SinusoidalTaskTrajectory(
-        init_pos=iniat_pos,
+        init_pos=sinusoid_init_pos,
         init_rot=np.array(
             [
                 [1, 0, 0],
@@ -378,6 +389,7 @@ def main():
 
     if SAVE_DATA:
         met.generate_report(sim_data, output_dir="metrics")
+        met.save_barriers_to_csv(sim_data, output_dir="results")
 
     mean_tau = met.compute_mean_abs_torque(sim_data.u_actual)
     vis.plot_per_joint_torque(

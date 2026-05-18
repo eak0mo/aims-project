@@ -270,6 +270,7 @@ def main(control_method="torque", num_bodies=3):
     z_min = 0.1
 
     max_num_bodies = 5
+    ee_init_pos = (0.240, -0.000, 0.429)
 
     # Sample a lot of collision bodies
     all_collision_pos = np.random.uniform(
@@ -283,7 +284,7 @@ def main(control_method="torque", num_bodies=3):
     # print(collision_radii)
     collision_data = {"positions": collision_pos, "radii": collision_radii}
 
-    iniat_pos = (0.4, 0, 0.35)
+    sinusoid_init_pos = (0.4, 0, 0.35)
     amplitude = (0, 0.25, -0.15)
     frequency = (0, 5, 2.5)
 
@@ -309,28 +310,27 @@ def main(control_method="torque", num_bodies=3):
     # )
 
     prompt = barrier.create_prompt_col(
-        ([0, 0, 0]),
-        ([0.240, -0.000, 0.429]),
-        iniat_pos,
+        ee_init_pos,
+        sinusoid_init_pos,
         amplitude,
         frequency,
-        collision_pos.tolist(),
+        collision_pos,
         collision_radii,
     )
 
-    ee_pos_min = np.array([0.15, -0.25, 0.25])
-    ee_pos_max = np.array([0.75, 0.25, 0.75])
-    wb_pos_min = np.array([-0.5, -0.5, 0.0])
-    wb_pos_max = np.array([0.75, 0.5, 1.0])
+    # ee_pos_min = np.array([0.15, -0.25, 0.25])
+    # ee_pos_max = np.array([0.75, 0.25, 0.75])
+    # wb_pos_min = np.array([-0.5, -0.5, 0.0])
+    # wb_pos_max = np.array([0.75, 0.5, 1.0])
 
     # llm outputs
-    # model = "llama3.1"
-    # print(f"Generating Barrier from {model}")
-    # ee_pos_min, ee_pos_max, wb_pos_min, wb_pos_max = barrier.generate_barrier(
-    #     user_prompt=prompt
-    # )
-    # print("Barriers Generated: ee:", ee_pos_min, ee_pos_max)
-    # print("Barriers Generated: whole body:", wb_pos_min, wb_pos_max)
+    model = "llama3.1"
+    print(f"Generating Barrier from {model}")
+    ee_pos_min, ee_pos_max, wb_pos_min, wb_pos_max = barrier.generate_barrier(
+        user_prompt=prompt
+    )
+    print("Barriers Generated: ee:", ee_pos_min, ee_pos_max)
+    print("Barriers Generated: whole body:", wb_pos_min, wb_pos_max)
 
     torque_config = CollisionsConfig(
         robot,
@@ -344,7 +344,7 @@ def main(control_method="torque", num_bodies=3):
     )
     torque_cbf = CBF.from_config(torque_config)
     traj = SinusoidalTaskTrajectory(
-        init_pos=iniat_pos,
+        init_pos=sinusoid_init_pos,
         init_rot=np.array(
             [
                 [1, 0, 0],

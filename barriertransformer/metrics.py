@@ -201,3 +201,35 @@ def generate_report(data: SimulationData, output_dir: str = "results"):
         
     print(f"Metrics saved to {filepath}")
     return results_row
+
+
+def save_barriers_to_csv(data: SimulationData, output_dir: str = "results"):
+    """Saves the generated barriers (EE and WB bounds) to a CSV file."""
+    os.makedirs(output_dir, exist_ok=True)
+    filename = f"{data.date}_{data.experiment_title}_{data.prompt_version}_barriers.csv"
+    filepath = os.path.join(output_dir, filename)
+    
+    # Format the barrier bounds as lists for the CSV, or "None" if missing
+    ee_min_str = str(data.pos_min.tolist()) if hasattr(data.pos_min, "tolist") else str(data.pos_min)
+    ee_max_str = str(data.pos_max.tolist()) if hasattr(data.pos_max, "tolist") else str(data.pos_max)
+    wb_min_str = str(data.wb_min.tolist()) if hasattr(data.wb_min, "tolist") else str(data.wb_min)
+    wb_max_str = str(data.wb_max.tolist()) if hasattr(data.wb_max, "tolist") else str(data.wb_max)
+
+    row = {
+        "Experiment": data.experiment_title,
+        "Prompt Version": data.prompt_version,
+        "EE_Min": ee_min_str,
+        "EE_Max": ee_max_str,
+        "WB_Min": wb_min_str,
+        "WB_Max": wb_max_str,
+    }
+    
+    file_exists = os.path.isfile(filepath)
+    with open(filepath, mode='a', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=row.keys())
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(row)
+        
+    print(f"Barriers saved to {filepath}")
+    return row

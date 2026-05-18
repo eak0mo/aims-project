@@ -20,7 +20,7 @@ from jax.typing import ArrayLike
 # import matplotlib.pyplot as plt
 
 sys.path.append("././")
-from barriertransformer.barrier_generate import generate_barrier, create_prompt
+from barriertransformer.barrier_generate import generate_barrier, create_prompt, create_prompt_col
 from barriertransformer import visualization as vis
 from barriertransformer import metrics as met
 # from package.pack import test
@@ -38,8 +38,8 @@ from oscbf.utils.visualization import create_box
 
 DATA_DIR = "oscbf/experiments/data/"
 SHOW_IMAGES = True
-name_date = "dynamic_motion_15_05"
-SAVE_DATA = False
+name_date = "dynamic_motion_improved_prompt_18_05"
+SAVE_DATA = True
 PAUSE_FOR_PICTURES = False
 RECORD_VIDEO = False
 PICTURE_IDXS = [1000, 1250, 1600, 1900, 2200]
@@ -207,29 +207,14 @@ def main(control_method="torque"):
     # print(
     #     f"Starting EE Position: [{ee_pos0[0]:.3f}, {ee_pos0[1]:.3f}, {ee_pos0[2]:.3f}]"
     # )
+
+    ee_init_pos = (0.240, -0.000, 0.429)
+    # sinusoid
     amplitude = (0.25, 0, 0)
     frequency = (5, 0, 0)
+    sinusoid_init_pos = (0.55, 0, 0.45)
 
-    prompt = create_prompt(
-        (0, 0, 0), ([0.240, -0.000, 0.429]), ([0.55, 0, 0.45]), amplitude, frequency
-    )
-    # print(prompt)
-
-    # integration with llama 3.1
-    model = "llama3.1"
-    print(f"Generating Barrier from {model}")
-    pos_min, pos_max, wb_min, wb_max = generate_barrier(user_prompt=prompt)
-    print("Barriers Generated: ee:", pos_min, pos_max)
-    print("Barriers Generated: whole body:", wb_min, wb_max)
-    # pos_min = (0.235, -0.26, 0.385)
-    # pos_max = (1.075, 0.26, 0.705)
-    # wb_min = (-0.34, -0.03, -0.019)
-    # wb_max = (0.85, 0.03, 0.46)
-
-    # NOTE: This term has a noticeable impact on the performance for this demo.
-    # It's often neglected due to computational demands and model error
-    compensate_centrifugal_coriolis = False
-
+    # pick and drop trajectory
     # waypoint/pick and drop traj
     # waypoints = np.array(
     #     [
@@ -251,6 +236,29 @@ def main(control_method="torque"):
     #     ]
     # )
 
+    prompt = create_prompt(
+        ee_init_pos, sinusoid_init_pos, amplitude, frequency
+    )
+    # prompt = create_prompt_col(
+    #     ee_init_pos, sinusoid_init_pos, amplitude, frequency
+    # )
+    # print(prompt)
+
+    # integration with llama 3.1
+    model = "llama3.1"
+    print(f"Generating Barrier from {model}")
+    pos_min, pos_max, wb_min, wb_max = generate_barrier(user_prompt=prompt)
+    print("Barriers Generated: ee:", pos_min, pos_max)
+    print("Barriers Generated: whole body:", wb_min, wb_max)
+    # pos_min = (0.175, -0.1, 0.35)
+    # pos_max = (0.925, 0.1, 0.55)
+    # wb_min = (-0.34, -0.03, -0.019)
+    # wb_max = (0.85, 0.03, 0.46)
+
+    # NOTE: This term has a noticeable impact on the performance for this demo.
+    # It's often neglected due to computational demands and model error
+    compensate_centrifugal_coriolis = False
+
     torque_config = EESafeSetTorqueConfig(
         robot,
         pos_min,
@@ -261,7 +269,7 @@ def main(control_method="torque"):
     velocity_config = EESafeSetVelocityConfig(robot, pos_min, pos_max)
     velocity_cbf = CBF.from_config(velocity_config)
     traj = SinusoidalTaskTrajectory(
-        init_pos=(0.55, 0, 0.45),
+        init_pos=sinusoid_init_pos,
         init_rot=np.array(
             [
                 [1, 0, 0],
@@ -474,14 +482,15 @@ def main(control_method="torque"):
         joint_sphere_radii=joint_sphere_radii,
         collision_spheres=None,
         collision_sphere_radii=None,
-        experiment_title="Dynamic_Motion_14_05",
-        prompt_version="v1",
+        experiment_title="Dynamic_Motion_18_05",
+        prompt_version="v2",
     )
     #
     # # 2. Generate CSV Report
     # # Calls all jitted functions and saves them to 'results/...'
     if SAVE_DATA:
         met.generate_report(sim_data, output_dir="metrics")
+        met.save_barriers_to_csv(sim_data, output_dir="results")
     #
     # # 3. Generate Visualizations
     mean_tau = met.compute_mean_abs_torque(sim_data.u_actual)
