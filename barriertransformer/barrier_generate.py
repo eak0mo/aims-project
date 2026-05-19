@@ -389,8 +389,8 @@ STEP 1 — FIND THE TRAJECTORY BOX:
 
 STEP 2 — EE BARRIER:
   Per axis i:
-  - ee_min[i] = pos_min[i] - 0.2
-  - ee_max[i] = pos_max[i] + 0.2
+  - ee_min[i] = pos_min[i] - 0.1
+  - ee_max[i] = pos_max[i] + 0.1
   - center[i] = (ee_min[i] + ee_max[i]) / 2
   - length[i] = ee_max[i] - ee_min[i]
 
