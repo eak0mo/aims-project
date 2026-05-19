@@ -189,7 +189,7 @@ def main():
     amplitude = (0, 0.25, 0)
     frequency = (0, 5, 0)
 
-    # prompt = barrier.create_prompt_col(
+    # prompt = barrier.create_prompt_col_old(
     #     ([0, 0, 0]),
     #     ([0.240, -0.000, 0.429]),
     #     sinusoid_init_pos,

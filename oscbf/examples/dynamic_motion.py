@@ -23,6 +23,7 @@ sys.path.append("././")
 from barriertransformer.barrier_generate import (
     generate_barrier,
     create_prompt,
+    create_prompt_old,
     create_prompt_col,
     create_prompt_pnp,
 )
@@ -43,8 +44,8 @@ from oscbf.utils.visualization import create_box
 
 DATA_DIR = "oscbf/experiments/data/"
 SHOW_IMAGES = True
-name_date = "dynamic_motion_improved_prompt_18_05"
-SAVE_DATA = False
+name_date = "dynamic_motion_res_19_05"
+SAVE_DATA = True 
 PAUSE_FOR_PICTURES = False
 RECORD_VIDEO = False
 PICTURE_IDXS = [1000, 1250, 1600, 1900, 2200]
@@ -215,15 +216,22 @@ def main(control_method="torque"):
 
     ee_init_pos = (0.240, -0.000, 0.429)
     # sinusoid
-    amplitude = (0.25, 0, 0)
-    frequency = (5, 0, 0)
-    sinusoid_init_pos = (0.55, 0, 0.45)
+    amplitude = (0, 0.14, 0)
+    frequency = (0, 0.59, 0)
+    sinusoid_init_pos = (0.37, 0.49, 0.45)
+
+    #old values 
+    # amplitude = (0.25, 0, 0)
+    # frequency = (5, 0, 0)
+    # sinusoid_init_pos = (0.55, 0, 0.45)
 
     # sinusoid prompt
     # prompt = create_prompt(
     #     ee_init_pos, sinusoid_init_pos, amplitude, frequency
     # )
-    # prompt = create_prompt_col(
+    prompt = create_prompt_col(ee_init_pos, sinusoid_init_pos, amplitude, frequency)
+
+    # prompt = create_prompt_old(
     #     ee_init_pos, sinusoid_init_pos, amplitude, frequency
     # )
 
@@ -250,7 +258,7 @@ def main(control_method="torque"):
         ]
     )
     # pick and drop prompt
-    prompt = create_prompt_pnp(ee_init_pos, way_point_init_post, waypoints, times)
+    # prompt = create_prompt_pnp(ee_init_pos, way_point_init_post, waypoints, times)
 
     # prompt = create_prompt_col(
     #     ee_init_pos, sinusoid_init_pos, amplitude, frequency
@@ -261,10 +269,11 @@ def main(control_method="torque"):
     model = "llama3.1"
     print(f"Generating Barrier from {model}")
     pos_min, pos_max, wb_min, wb_max = generate_barrier(
-        user_prompt=prompt, sin_traj=False
+        user_prompt=prompt, sin_traj=True
     )
     print("Barriers Generated: ee:", pos_min, pos_max)
     print("Barriers Generated: whole body:", wb_min, wb_max)
+    # for pick and drop
     # pos_min = (0.25, -0.7, -0.05)
     # pos_max = (0.65,  0.7,  0.75)
     # wb_min  = (-0.34, -0.70, -0.20)
@@ -283,20 +292,20 @@ def main(control_method="torque"):
     torque_cbf = CBF.from_config(torque_config)
     velocity_config = EESafeSetVelocityConfig(robot, pos_min, pos_max)
     velocity_cbf = CBF.from_config(velocity_config)
-    # traj = SinusoidalTaskTrajectory(
-    #     init_pos=sinusoid_init_pos,
-    #     init_rot=np.array(
-    #         [
-    #             [1, 0, 0],
-    #             [0, -1, 0],
-    #             [0, 0, -1],
-    #         ]
-    #     ),
-    #     amplitude=amplitude,
-    #     angular_freq=frequency,
-    #     phase=(0, 0, 0),
-    # )
-    traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
+    traj = SinusoidalTaskTrajectory(
+        init_pos=sinusoid_init_pos,
+        init_rot=np.array(
+            [
+                [1, 0, 0],
+                [0, -1, 0],
+                [0, 0, -1],
+            ]
+        ),
+        amplitude=amplitude,
+        angular_freq=frequency,
+        phase=(0, 0, 0),
+    )
+    # traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
     timestep = 1 / 1000
     bg_color = (1, 1, 1)
     if control_method == "torque":
@@ -408,7 +417,7 @@ def main(control_method="torque"):
         pixel_width,
         pixel_height,
         show_plots=SHOW_IMAGES,
-        name=f"test_dymotion_plots/{name_date}",
+        name=f"results/new/dymo/{name_date}",
         folder="test_dynamotion_plots",
         save_image=SAVE_DATA,
     )
@@ -416,7 +425,7 @@ def main(control_method="torque"):
     if RECORD_VIDEO:
         # for saving a live recoding of the simulation from the environment.
         env.client.startStateLogging(
-            env.client.STATE_LOGGING_VIDEO_MP4, f"test_dymotion_plots/{name_date}.mp4"
+            env.client.STATE_LOGGING_VIDEO_MP4, f"results/new/dymo/{name_date}.mp4"
         )
 
     duration = 11.0
@@ -465,7 +474,7 @@ def main(control_method="torque"):
         ts,
         show_plots=SHOW_IMAGES,
         save_image=SAVE_DATA,
-        name=f"test_dymotion_plots/{name_date}_links",
+        name=f"results/new/dymo/{name_date}_links",
     )
 
     # # Converting lists to JAX arrays to speed up metric computation
@@ -497,15 +506,15 @@ def main(control_method="torque"):
         joint_sphere_radii=joint_sphere_radii,
         collision_spheres=None,
         collision_sphere_radii=None,
-        experiment_title="Dynamic_Motion_18_05",
+        experiment_title="Dynamic_Motion_res_19_05",
         prompt_version="v2",
     )
     #
     # # 2. Generate CSV Report
     # # Calls all jitted functions and saves them to 'results/...'
     if SAVE_DATA:
-        met.generate_report(sim_data, output_dir="metrics")
-        met.save_barriers_to_csv(sim_data, output_dir="results")
+        met.generate_report(sim_data, output_dir="results/new/dymo")
+        met.save_barriers_to_csv(sim_data, output_dir="results/new/dymo")
     #
     # # 3. Generate Visualizations
     mean_tau = met.compute_mean_abs_torque(sim_data.u_actual)
@@ -513,7 +522,7 @@ def main(control_method="torque"):
         mean_tau,
         show_plots=SHOW_IMAGES,
         save_image=SAVE_DATA,
-        name=f"test_dymotion_plots/{name_date}_jtorque",
+        name=f"results/new/dymo/{name_date}_jtorque",
     )
     #
     vis.plot_barrier_evolution(
@@ -523,7 +532,7 @@ def main(control_method="torque"):
         u_unsafe=sim_data.u_nominal,
         show_plots=SHOW_IMAGES,
         save_image=SAVE_DATA,
-        name=f"test_dymotion_plots/{name_date}_hevolve",
+        name=f"results/new/dymo/{name_date}_hevolve",
     )
     # # --- END METRICS INTEGRATION EXAMPLE ---
     # """

@@ -231,141 +231,141 @@ OUTPUT — respond ONLY with JSON:
 
 
 
-sys_prompt_new_with_example = """You are a robotics safety expert for the Franka Emika Panda robot arm. Generate TWO minimal
-axis-aligned safety barriers for a sinusoidal tracking task.
+# sys_prompt_new_with_example = """You are a robotics safety expert for the Franka Emika Panda robot arm. Generate TWO minimal
+# axis-aligned safety barriers for a sinusoidal tracking task.
 
-FRANKA EMIKA PANDA WORKSPACE LIMITS (meters):
-  x ∈ [-0.855, 0.855], y ∈ [-0.855, 0.855], z ∈ [-0.1, 1.19]
-  Maximum whole-body barrier: center [0.0, 0.0, 0.545], lengths [1.71, 1.71, 1.29]
+# FRANKA EMIKA PANDA WORKSPACE LIMITS (meters):
+#   x ∈ [-0.855, 0.855], y ∈ [-0.855, 0.855], z ∈ [-0.1, 1.19]
+#   Maximum whole-body barrier: center [0.0, 0.0, 0.545], lengths [1.71, 1.71, 1.29]
 
-INPUTS (all in meters):
-  - ee_start:        initial end-effector position [x, y, z]
-  - base_pos:        robot base position [x, y, z] (default [0, 0, 0])
-  - target_start:    center of the sinusoid trajectory [x, y, z]
-  - amplitude:       sinusoid amplitude per axis [ax, ay, az]
-  - collision_balls: list of spheres {"center": [x,y,z], "radius": r}, or NONE
+# INPUTS (all in meters):
+#   - ee_start:        initial end-effector position [x, y, z]
+#   - base_pos:        robot base position [x, y, z] (default [0, 0, 0])
+#   - target_start:    center of the sinusoid trajectory [x, y, z]
+#   - amplitude:       sinusoid amplitude per axis [ax, ay, az]
+#   - collision_balls: list of spheres {"center": [x,y,z], "radius": r}, or NONE
 
-SINUSOID RANGE (compute this first, per axis):
-  - If amplitude[i] > 0: trajectory spans [target_start[i] - amplitude[i], target_start[i] + amplitude[i]]
-  - If amplitude[i] = 0: trajectory is a single point at target_start[i]
+# SINUSOID RANGE (compute this first, per axis):
+#   - If amplitude[i] > 0: trajectory spans [target_start[i] - amplitude[i], target_start[i] + amplitude[i]]
+#   - If amplitude[i] = 0: trajectory is a single point at target_start[i]
 
-BARRIER 1 — EE BARRIER (minimal, centered on trajectory):
-  Per axis, in order:
-  a. Take the full trajectory range from above.
-  b. Apply 0.2 m buffer to both ends of the range.
-  c. If the resulting length is still less than 0.2 m: set length = 0.2 m minimum.
-  d. base_pos and ee_start must NOT influence this barrier.
+# BARRIER 1 — EE BARRIER (minimal, centered on trajectory):
+#   Per axis, in order:
+#   a. Take the full trajectory range from above.
+#   b. Apply 0.2 m buffer to both ends of the range.
+#   c. If the resulting length is still less than 0.2 m: set length = 0.2 m minimum.
+#   d. base_pos and ee_start must NOT influence this barrier.
 
-BARRIER 2 — BODY BARRIER (expands outward from EE barrier per axis):
-  Per axis, in order:
-  a. Start from the EE barrier range and expand outward equally on both ends.
-  b. If a collision object is present on this axis:
-       - If object is on the MAX side (obj_center[i] > ee_max[i]): stop at wb_max[i] = obj_min[i]
-       - If object is on the MIN side (obj_center[i] < ee_min[i]): stop at wb_min[i] = obj_max[i]
-       - If object overlaps the EE barrier on this axis: keep expanding, flag in reasoning.
-       Lock the stopped face. Continue expanding the opposite face to cover base_pos + 0.2 m.
-  c. If no collision on this axis: expand both faces until base_pos is covered, then add
-     0.2 m buffer beyond base_pos on both ends.
-  d. Must fully contain the EE barrier on every axis.
-  e. Must be strictly larger than EE barrier on all axes.
-  f. Must not exceed the maximum whole-body barrier limits.
+# BARRIER 2 — BODY BARRIER (expands outward from EE barrier per axis):
+#   Per axis, in order:
+#   a. Start from the EE barrier range and expand outward equally on both ends.
+#   b. If a collision object is present on this axis:
+#        - If object is on the MAX side (obj_center[i] > ee_max[i]): stop at wb_max[i] = obj_min[i]
+#        - If object is on the MIN side (obj_center[i] < ee_min[i]): stop at wb_min[i] = obj_max[i]
+#        - If object overlaps the EE barrier on this axis: keep expanding, flag in reasoning.
+#        Lock the stopped face. Continue expanding the opposite face to cover base_pos + 0.2 m.
+#   c. If no collision on this axis: expand both faces until base_pos is covered, then add
+#      0.2 m buffer beyond base_pos on both ends.
+#   d. Must fully contain the EE barrier on every axis.
+#   e. Must be strictly larger than EE barrier on all axes.
+#   f. Must not exceed the maximum whole-body barrier limits.
 
-VALIDATION — check before outputting:
-  - EE barrier contains only the full trajectory range minimally on every axis.
-  - EE barrier does NOT contain base_pos or ee_start.
-  - Body barrier fully contains EE barrier and base_pos on every axis.
-  - Body barrier is strictly larger than EE barrier on all three axes.
-  - If no collision: body barrier expands to cover base_pos + 0.2 m buffer on all axes.
-  - If collision: only the colliding face is stopped, opposite face expands normally.
+# VALIDATION — check before outputting:
+#   - EE barrier contains only the full trajectory range minimally on every axis.
+#   - EE barrier does NOT contain base_pos or ee_start.
+#   - Body barrier fully contains EE barrier and base_pos on every axis.
+#   - Body barrier is strictly larger than EE barrier on all three axes.
+#   - If no collision: body barrier expands to cover base_pos + 0.2 m buffer on all axes.
+#   - If collision: only the colliding face is stopped, opposite face expands normally.
 
-OUTPUT — respond ONLY with JSON:
-{
-  "reasoning": "<per-axis derivation for EE then body barrier>",
-  "ee_center":  [x, y, z],
-  "ee_lengths": [lx, ly, lz],
-  "wb_center":  [x, y, z],
-  "wb_lengths": [lx, ly, lz]
-}
-"""
+# OUTPUT — respond ONLY with JSON:
+# {
+#   "reasoning": "<per-axis derivation for EE then body barrier>",
+#   "ee_center":  [x, y, z],
+#   "ee_lengths": [lx, ly, lz],
+#   "wb_center":  [x, y, z],
+#   "wb_lengths": [lx, ly, lz]
+# }
+# """
 
 
-sys_prompt_new_noex_col = """You are a robotics safety expert for the Franka Emika Panda robot arm. Generate TWO minimal
-axis-aligned safety barriers for a sinusoidal tracking task.
+# sys_prompt_new_noex_col = """You are a robotics safety expert for the Franka Emika Panda robot arm. Generate TWO minimal
+# axis-aligned safety barriers for a sinusoidal tracking task.
 
-FRANKA EMIKA PANDA WORKSPACE LIMITS (meters):
-  x ∈ [-0.855, 0.855], y ∈ [-0.855, 0.855], z ∈ [-0.1, 1.19]
-  Maximum whole-body barrier: center [0.0, 0.0, 0.545], lengths [1.71, 1.71, 1.29]
+# FRANKA EMIKA PANDA WORKSPACE LIMITS (meters):
+#   x ∈ [-0.855, 0.855], y ∈ [-0.855, 0.855], z ∈ [-0.1, 1.19]
+#   Maximum whole-body barrier: center [0.0, 0.0, 0.545], lengths [1.71, 1.71, 1.29]
 
-INPUTS (all in meters):
-  - ee_start:          initial end-effector position [x, y, z]
-  - base_pos:          robot base position [x, y, z] (default [0, 0, 0])
-  - target_start:      center of the sinusoid trajectory [x, y, z]
-  - amplitude:         sinusoid amplitude per axis [ax, ay, az]
-  - collision_objects: list of objects, or NONE. Each object is one of:
-                       {"center": [x,y,z], "radius": r}           (sphere)
-                       {"center": [x,y,z], "lengths": [lx,ly,lz]} (box or custom)
+# INPUTS (all in meters):
+#   - ee_start:          initial end-effector position [x, y, z]
+#   - base_pos:          robot base position [x, y, z] (default [0, 0, 0])
+#   - target_start:      center of the sinusoid trajectory [x, y, z]
+#   - amplitude:         sinusoid amplitude per axis [ax, ay, az]
+#   - collision_objects: list of objects, or NONE. Each object is one of:
+#                        {"center": [x,y,z], "radius": r}           (sphere)
+#                        {"center": [x,y,z], "lengths": [lx,ly,lz]} (box or custom)
 
-SINUSOID RANGE (compute this first, per axis):
-  - If amplitude[i] > 0: trajectory spans [target_start[i] - amplitude[i], target_start[i] + amplitude[i]]
-  - If amplitude[i] = 0: trajectory is a single point at target_start[i]
+# SINUSOID RANGE (compute this first, per axis):
+#   - If amplitude[i] > 0: trajectory spans [target_start[i] - amplitude[i], target_start[i] + amplitude[i]]
+#   - If amplitude[i] = 0: trajectory is a single point at target_start[i]
 
-COLLISION ZONE (compute this second, skip entirely if collision_objects is NONE):
-  For each object compute per axis:
-  - If sphere:  obj_min[i] = obj_center[i] - radius,         obj_max[i] = obj_center[i] + radius
-  - If box:     obj_min[i] = obj_center[i] - lengths[i] / 2, obj_max[i] = obj_center[i] + lengths[i] / 2
-  - An object intersects a barrier on axis i if: barrier_min[i] < obj_max[i] AND barrier_max[i] > obj_min[i]
+# COLLISION ZONE (compute this second, skip entirely if collision_objects is NONE):
+#   For each object compute per axis:
+#   - If sphere:  obj_min[i] = obj_center[i] - radius,         obj_max[i] = obj_center[i] + radius
+#   - If box:     obj_min[i] = obj_center[i] - lengths[i] / 2, obj_max[i] = obj_center[i] + lengths[i] / 2
+#   - An object intersects a barrier on axis i if: barrier_min[i] < obj_max[i] AND barrier_max[i] > obj_min[i]
 
-STEP 1 — EE BARRIER (trajectory only, locked before any collision logic):
-  Per axis, in order:
-  a. Take the full sinusoid range from above — this is the ONLY source for the EE barrier.
-     ee_start does NOT influence the EE barrier center or size.
-  b. Apply 0.2 m buffer to both ends of the sinusoid range.
-  c. If the resulting length is still less than 0.2 m: set length = 0.2 m minimum.
-  d. Center the EE barrier on target_start[i] — not on ee_start.
-  e. base_pos must NOT influence this barrier.
-  f. EE barrier is now LOCKED — it cannot be shrunk for any reason including collision.
+# STEP 1 — EE BARRIER (trajectory only, locked before any collision logic):
+#   Per axis, in order:
+#   a. Take the full sinusoid range from above — this is the ONLY source for the EE barrier.
+#      ee_start does NOT influence the EE barrier center or size.
+#   b. Apply 0.2 m buffer to both ends of the sinusoid range.
+#   c. If the resulting length is still less than 0.2 m: set length = 0.2 m minimum.
+#   d. Center the EE barrier on target_start[i] — not on ee_start.
+#   e. base_pos must NOT influence this barrier.
+#   f. EE barrier is now LOCKED — it cannot be shrunk for any reason including collision.
 
-STEP 2 — BODY BARRIER (start from max workspace, minimise per collision axis):
-  Per axis, in order:
-  a. Start from the maximum whole-body barrier above.
-  b. If collision_objects is NONE: keep at maximum on all axes, skip to step d.
-  c. If collision_objects present:
-       For each object, identify which axes it intersects the body barrier on.
-       Handle the most constrained axis first (axis where obj_max[i] - obj_min[i] is largest).
-       Per axis, shrink the face that minimises the barrier size while avoiding the object:
-         - Object intersects MAX face only: wb_max[i] = obj_min[i]
-         - Object intersects MIN face only: wb_min[i] = obj_max[i]
-         - Object intersects BOTH faces: flag as unavoidable, keep axis at maximum.
-       After EVERY shrink immediately verify — trajectory coverage is the only hard constraint:
-         CHECK A — wb_max[i] > ee_max[i]: if FALSE keep wb_max[i] = ee_max[i], flag unavoidable.
-         CHECK B — wb_min[i] < ee_min[i]: if FALSE keep wb_min[i] = ee_min[i], flag unavoidable.
-         CHECK C — base_pos[i] inside [wb_min[i], wb_max[i]]: if FALSE expand minimally to include it.
-         No extra padding is added — the body barrier sits flush against the EE barrier if needed.
-  d. Final verification — body barrier must be strictly larger than EE barrier on all three axes:
-       - If wb_max[i] <= ee_max[i]: force wb_max[i] = ee_max[i] + 0.01
-       - If wb_min[i] >= ee_min[i]: force wb_min[i] = ee_min[i] - 0.01
+# STEP 2 — BODY BARRIER (start from max workspace, minimise per collision axis):
+#   Per axis, in order:
+#   a. Start from the maximum whole-body barrier above.
+#   b. If collision_objects is NONE: keep at maximum on all axes, skip to step d.
+#   c. If collision_objects present:
+#        For each object, identify which axes it intersects the body barrier on.
+#        Handle the most constrained axis first (axis where obj_max[i] - obj_min[i] is largest).
+#        Per axis, shrink the face that minimises the barrier size while avoiding the object:
+#          - Object intersects MAX face only: wb_max[i] = obj_min[i]
+#          - Object intersects MIN face only: wb_min[i] = obj_max[i]
+#          - Object intersects BOTH faces: flag as unavoidable, keep axis at maximum.
+#        After EVERY shrink immediately verify — trajectory coverage is the only hard constraint:
+#          CHECK A — wb_max[i] > ee_max[i]: if FALSE keep wb_max[i] = ee_max[i], flag unavoidable.
+#          CHECK B — wb_min[i] < ee_min[i]: if FALSE keep wb_min[i] = ee_min[i], flag unavoidable.
+#          CHECK C — base_pos[i] inside [wb_min[i], wb_max[i]]: if FALSE expand minimally to include it.
+#          No extra padding is added — the body barrier sits flush against the EE barrier if needed.
+#   d. Final verification — body barrier must be strictly larger than EE barrier on all three axes:
+#        - If wb_max[i] <= ee_max[i]: force wb_max[i] = ee_max[i] + 0.01
+#        - If wb_min[i] >= ee_min[i]: force wb_min[i] = ee_min[i] - 0.01
 
-VALIDATION — check before outputting:
-  - EE barrier covers full sinusoid range on every axis.
-  - EE barrier is centered on target_start, NOT on ee_start or base_pos.
-  - EE barrier length >= 0.2 m on every axis.
-  - Body barrier contains full EE barrier on every axis.
-  - Body barrier contains base_pos on every axis.
-  - Body barrier is strictly larger than EE barrier on all three axes.
-  - If no collision: body barrier equals maximum whole-body barrier (minmally sized).
-  - If collision: most constrained axis handled first, body barrier sits as close to
-    collision object as possible without violating EE coverage.
-  - ALL barriers should be minmally sized for the task
+# VALIDATION — check before outputting:
+#   - EE barrier covers full sinusoid range on every axis.
+#   - EE barrier is centered on target_start, NOT on ee_start or base_pos.
+#   - EE barrier length >= 0.2 m on every axis.
+#   - Body barrier contains full EE barrier on every axis.
+#   - Body barrier contains base_pos on every axis.
+#   - Body barrier is strictly larger than EE barrier on all three axes.
+#   - If no collision: body barrier equals maximum whole-body barrier (minmally sized).
+#   - If collision: most constrained axis handled first, body barrier sits as close to
+#     collision object as possible without violating EE coverage.
+#   - ALL barriers should be minmally sized for the task
 
-OUTPUT — respond ONLY with JSON:
-{
-  "reasoning": "<sinusoid range → EE barrier locked → collision zones → body barrier shrink per axis>",
-  "ee_center":  [x, y, z],
-  "ee_lengths": [lx, ly, lz],
-  "wb_center":  [x, y, z],
-  "wb_lengths": [lx, ly, lz]
-}
-"""
+# OUTPUT — respond ONLY with JSON:
+# {
+#   "reasoning": "<sinusoid range → EE barrier locked → collision zones → body barrier shrink per axis>",
+#   "ee_center":  [x, y, z],
+#   "ee_lengths": [lx, ly, lz],
+#   "wb_center":  [x, y, z],
+#   "wb_lengths": [lx, ly, lz]
+# }
+# """
 
 sys_prompt_new_pnp = """You are a robotics safety expert for the Franka Emika Panda robot arm. Generate TWO
 minimal axis-aligned safety barriers for a pick and place trajectory.
@@ -607,7 +607,7 @@ def generate_barrier(
     user_prompt: str = dynamic_motion_prompt, model_name: str = "llama3.1", sin_traj = True
 ):
     
-  if sin_traj:
+  if sin_traj: #sys_prompt_wose, sys_prompt_new_no_example
     barrier = extract_barrier(
         prompt_text=user_prompt, model_name=model_name, system_prompt=sys_prompt_new_no_example
     )
