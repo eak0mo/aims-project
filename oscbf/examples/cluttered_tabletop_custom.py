@@ -480,14 +480,14 @@ def main(control_method="torque", num_bodies=3):
         pixel_width,
         pixel_height,
         show_plots=SHOW_PLOTS,
-        name=f"tabletop/{name_date}_cam",
+        name=f"tabletop/custom_{name_date}_cam",
         folder="tabletop",
         save_image=SAVE_DATA,
     )
 
     if RECORD_VIDEO:
         env.client.startStateLogging(
-            env.client.STATE_LOGGING_VIDEO_MP4, f"tabletop/{name_date}_video.mp4"
+            env.client.STATE_LOGGING_VIDEO_MP4, f"tabletop/custom_{name_date}_video.mp4"
         )
 
     duration = 11.0
@@ -524,7 +524,7 @@ def main(control_method="torque", num_bodies=3):
         ts,
         show_plots=SHOW_PLOTS,
         save_image=SAVE_DATA,
-        name=f"tabletop/{name_date}_links",
+        name=f"tabletop/custom_{name_date}_links",
     )
 
     # metrics
@@ -555,7 +555,7 @@ def main(control_method="torque", num_bodies=3):
         collision_spheres=collision_pos,
         collision_sphere_radii=collision_radii,
         experiment_title="Cluttered_Tabletop_Custom",
-        prompt_version="v1",
+        prompt_version="v2",
     )
 
     if SAVE_DATA:
@@ -566,7 +566,7 @@ def main(control_method="torque", num_bodies=3):
         mean_tau,
         show_plots=SHOW_PLOTS,
         save_image=SAVE_DATA,
-        name=f"tabletop/{name_date}_jtorque",
+        name=f"tabletop/custom_{name_date}_jtorque",
     )
     vis.plot_barrier_evolution(
         time=ts,
@@ -575,7 +575,7 @@ def main(control_method="torque", num_bodies=3):
         u_unsafe=sim_data.u_nominal,
         show_plots=SHOW_PLOTS,
         save_image=SAVE_DATA,
-        name=f"tabletop/{name_date}_hevolve",
+        name=f"tabletop/custom_{name_date}_hevolve",
     )
 
 

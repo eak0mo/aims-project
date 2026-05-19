@@ -211,7 +211,7 @@ def main():
     # print(prompt)
 
     # integration with llama 3.1
-    model = "llama3.1"
+    model = "llama3.1:latest"
     print(f"Generating Barrier from {model}")
     ee_pos_min, ee_pos_max, wb_pos_min, wb_pos_max = barrier.generate_barrier(
         user_prompt=prompt

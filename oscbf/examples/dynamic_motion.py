@@ -20,7 +20,12 @@ from jax.typing import ArrayLike
 # import matplotlib.pyplot as plt
 
 sys.path.append("././")
-from barriertransformer.barrier_generate import generate_barrier, create_prompt, create_prompt_col
+from barriertransformer.barrier_generate import (
+    generate_barrier,
+    create_prompt,
+    create_prompt_col,
+    create_prompt_pnp,
+)
 from barriertransformer import visualization as vis
 from barriertransformer import metrics as met
 # from package.pack import test
@@ -39,7 +44,7 @@ from oscbf.utils.visualization import create_box
 DATA_DIR = "oscbf/experiments/data/"
 SHOW_IMAGES = True
 name_date = "dynamic_motion_improved_prompt_18_05"
-SAVE_DATA = True
+SAVE_DATA = False
 PAUSE_FOR_PICTURES = False
 RECORD_VIDEO = False
 PICTURE_IDXS = [1000, 1250, 1600, 1900, 2200]
@@ -214,31 +219,39 @@ def main(control_method="torque"):
     frequency = (5, 0, 0)
     sinusoid_init_pos = (0.55, 0, 0.45)
 
-    # pick and drop trajectory
-    # waypoint/pick and drop traj
-    # waypoints = np.array(
-    #     [
-    #         [0.45, -0.5, 0.55],  # t=0.0s: Start above pick location
-    #         [0.45, -0.5, 0.15],  # t=2.0s: Reach down to pick object
-    #         [0.45, -0.5, 0.55],  # t=4.0s: Lift object back up
-    #         [0.45, 0.50, 0.55],  # t=7.0s: Move horizontally above drop location
-    #         [0.45, 0.50, 0.15],  # t=9.0s: Lower down to drop location
-    #     ]
+    # sinusoid prompt
+    # prompt = create_prompt(
+    #     ee_init_pos, sinusoid_init_pos, amplitude, frequency
     # )
-    # # Define the exact timestamp (in seconds) for each waypoint
-    # times = np.array([0.5, 2.0, 4.0, 7.0, 9.0])
-    # # Maintain a constant downward-facing end-effector orientation
-    # init_rot = np.array(
-    #     [
-    #         [1, 0, 0],
-    #         [0, -1, 0],
-    #         [0, 0, -1],
-    #     ]
+    # prompt = create_prompt_col(
+    #     ee_init_pos, sinusoid_init_pos, amplitude, frequency
     # )
 
-    prompt = create_prompt(
-        ee_init_pos, sinusoid_init_pos, amplitude, frequency
+    # pick and drop trajectory
+    # waypoint/pick and drop traj
+    way_point_init_post = (0.45, -0.5, 0.55)
+    waypoints = np.array(
+        [
+            [0.45, -0.5, 0.55],  # t=0.0s: Start above pick location
+            [0.45, -0.5, 0.15],  # t=2.0s: Reach down to pick object
+            [0.45, -0.5, 0.55],  # t=4.0s: Lift object back up
+            [0.45, 0.50, 0.55],  # t=7.0s: Move horizontally above drop location
+            [0.45, 0.50, 0.15],  # t=9.0s: Lower down to drop location
+        ]
     )
+    # Define the exact timestamp (in seconds) for each waypoint
+    times = np.array([0.5, 2.0, 4.0, 7.0, 9.0])
+    # Maintain a constant downward-facing end-effector orientation
+    init_rot = np.array(
+        [
+            [1, 0, 0],
+            [0, -1, 0],
+            [0, 0, -1],
+        ]
+    )
+    # pick and drop prompt
+    prompt = create_prompt_pnp(ee_init_pos, way_point_init_post, waypoints, times)
+
     # prompt = create_prompt_col(
     #     ee_init_pos, sinusoid_init_pos, amplitude, frequency
     # )
@@ -247,13 +260,15 @@ def main(control_method="torque"):
     # integration with llama 3.1
     model = "llama3.1"
     print(f"Generating Barrier from {model}")
-    pos_min, pos_max, wb_min, wb_max = generate_barrier(user_prompt=prompt)
+    pos_min, pos_max, wb_min, wb_max = generate_barrier(
+        user_prompt=prompt, sin_traj=False
+    )
     print("Barriers Generated: ee:", pos_min, pos_max)
     print("Barriers Generated: whole body:", wb_min, wb_max)
-    # pos_min = (0.175, -0.1, 0.35)
-    # pos_max = (0.925, 0.1, 0.55)
-    # wb_min = (-0.34, -0.03, -0.019)
-    # wb_max = (0.85, 0.03, 0.46)
+    # pos_min = (0.25, -0.7, -0.05)
+    # pos_max = (0.65,  0.7,  0.75)
+    # wb_min  = (-0.34, -0.70, -0.20)
+    # wb_max  = ( 0.85,  0.70,  0.75)
 
     # NOTE: This term has a noticeable impact on the performance for this demo.
     # It's often neglected due to computational demands and model error
@@ -268,20 +283,20 @@ def main(control_method="torque"):
     torque_cbf = CBF.from_config(torque_config)
     velocity_config = EESafeSetVelocityConfig(robot, pos_min, pos_max)
     velocity_cbf = CBF.from_config(velocity_config)
-    traj = SinusoidalTaskTrajectory(
-        init_pos=sinusoid_init_pos,
-        init_rot=np.array(
-            [
-                [1, 0, 0],
-                [0, -1, 0],
-                [0, 0, -1],
-            ]
-        ),
-        amplitude=amplitude,
-        angular_freq=frequency,
-        phase=(0, 0, 0),
-    )
-    # traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
+    # traj = SinusoidalTaskTrajectory(
+    #     init_pos=sinusoid_init_pos,
+    #     init_rot=np.array(
+    #         [
+    #             [1, 0, 0],
+    #             [0, -1, 0],
+    #             [0, 0, -1],
+    #         ]
+    #     ),
+    #     amplitude=amplitude,
+    #     angular_freq=frequency,
+    #     phase=(0, 0, 0),
+    # )
+    traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
     timestep = 1 / 1000
     bg_color = (1, 1, 1)
     if control_method == "torque":
