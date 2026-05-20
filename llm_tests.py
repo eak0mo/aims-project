@@ -16,7 +16,7 @@ def run_tests(model="llama3.1:70b"):
 
     # Examples from codebase: dynamic motion, multiple safety condition, cluttered tabletop, cluttered tabletop custom
     dynamic_motion = {
-        "experiment_title": "Dynamic_Motion_res_19_05",
+        "experiment_title": f"Dynamic_Motion_{model}",
         "ee_start": [0.24, 0.0, 0.429],
         "target_start": [0.37, 0.49, 0.45],
         "amplitude": [0.0, 0.14, 0.0],
@@ -28,7 +28,7 @@ def run_tests(model="llama3.1:70b"):
 
     # Multiple Safety Conditions
     multiple_safety = {
-        "experiment_title": "Multiple_Safety_Conditions_14_05",
+        "experiment_title": f"Multiple_Safety_Conditions_{model}",
         "ee_start": [0.24, 0.0, 0.429],
         "target_start": [0.4, 0.0, 0.35],
         "amplitude": [0.0, 0.25, 0.0],
@@ -55,7 +55,7 @@ def run_tests(model="llama3.1:70b"):
     cluttered_collision_radii = all_collision_radii[:25].tolist()
 
     cluttered_tabletop = {
-        "experiment_title": "Cluttered_Tabletop",
+        "experiment_title": f"Cluttered_Tabletop_{model}",
         "ee_start": [0.24, 0.0, 0.429],
         "target_start": [0.4, 0.0, 0.35],
         "amplitude": [0.0, 0.25, -0.15],
@@ -84,7 +84,7 @@ def run_tests(model="llama3.1:70b"):
     cluttered_custom_collision_radii = all_collision_radii_custom[:3].tolist()
 
     cluttered_tabletop_custom = {
-        "experiment_title": "Cluttered_Tabletop_Custom",
+        "experiment_title": f"Cluttered_Tabletop_Custom_{model}",
         "ee_start": [0.24, 0.0, 0.429],
         "target_start": [0.4, 0.0, 0.35],
         "amplitude": [0.0, 0.25, -0.15],
@@ -106,16 +106,26 @@ def run_tests(model="llama3.1:70b"):
         print(f"Running Experiment: {job['experiment_title']}")
         print(f"==================================================")
 
-        # Generate legacy prompt with one-shot example (wose)
+        # Generate new sinusoid prompt
+        new_prompt = bar.create_prompt_col(
+            ee_pos=job["ee_start"],
+            targ_pos=job["target_start"],
+            targ_amp=job["amplitude"],
+            targ_freq=job["frequency"],
+            collision_centers=job["collision_centers"],
+            collision_radii=job["collision_radii"],
+        )
+
+        # Generate legacy prompt
         if job["collision_centers"] is None or len(job["collision_centers"]) == 0:
-            prompt = bar.create_prompt_old(
+            old_prompt = bar.create_prompt_old(
                 ee_pos=job["ee_start"],
                 targ_pos=job["target_start"],
                 targ_amp=job["amplitude"],
                 targ_freq=job["frequency"],
             )
         else:
-            prompt = bar.create_prompt_col_old(
+            old_prompt = bar.create_prompt_col_old(
                 base_pos=[0, 0, 0],
                 ee_pos=job["ee_start"],
                 targ_pos=job["target_start"],
@@ -125,39 +135,60 @@ def run_tests(model="llama3.1:70b"):
                 coll_rad=job["collision_radii"],
             )
 
-        print(f"\n  -> Prompt Version: wose")
+        runs = [
+            {"name": "v2", "prompt": new_prompt, "type": "new"},
+            {"name": "v1", "prompt": old_prompt, "type": "old_ver01"},
+            {"name": "wose", "prompt": old_prompt, "type": "old_wose"},
+        ]
 
-        try:
-            print("    Generating barriers with model...")
-            ee_min, ee_max, wb_min, wb_max = bar.generate_barrier_old(
-                user_prompt=prompt, model_name=model, ver01=False
-            )
+        for run in runs:
+            p_ver = run["name"]
+            run_type = run["type"]
+            prompt = run["prompt"]
 
-            print(f"    Generated barriers successfully:")
-            print(f"      EE Min/Max: {ee_min} / {ee_max}")
-            print(f"      WB Min/Max: {wb_min} / {wb_max}")
+            print(f"\n  -> Prompt Version: {p_ver}")
 
-            # Save to CSV
-            sim_data = met.SimulationData(
-                dt=0.001,
-                time=jnp.array([]),
-                q_traj=jnp.array([]),
-                u_actual=jnp.array([]),
-                u_nominal=jnp.array([]),
-                pos_min=jnp.array(ee_min),
-                pos_max=jnp.array(ee_max),
-                wb_min=jnp.array(wb_min),
-                wb_max=jnp.array(wb_max),
-                experiment_title=job["experiment_title"],
-                prompt_version="wose",
-            )
+            try:
+                print(f"    Generating barriers with model: {model}")
+                if run_type == "new":
+                    ee_min, ee_max, wb_min, wb_max = bar.generate_barrier(
+                        user_prompt=prompt, model_name=model, sin_traj=True
+                    )
+                elif run_type == "old_ver01":
+                    ee_min, ee_max, wb_min, wb_max = bar.generate_barrier_old(
+                        user_prompt=prompt, model_name=model, ver01=True
+                    )
+                else:  # old_wose
+                    ee_min, ee_max, wb_min, wb_max = bar.generate_barrier_old(
+                        user_prompt=prompt, model_name=model, ver01=False
+                    )
 
-            met.save_barriers_to_csv(
-                sim_data, output_dir=os.path.join(job["output_dir"], "llm_res")
-            )
+                print(f"    Generated barriers successfully:")
+                print(f"      EE Min/Max: {ee_min} / {ee_max}")
+                print(f"      WB Min/Max: {wb_min} / {wb_max}")
 
-        except Exception as e:
-            print(f"    Error during barrier generation: {e}")
+                # Save to CSV
+                sim_data = met.SimulationData(
+                    dt=0.001,
+                    time=jnp.array([]),
+                    q_traj=jnp.array([]),
+                    u_actual=jnp.array([]),
+                    u_nominal=jnp.array([]),
+                    pos_min=jnp.array(ee_min),
+                    pos_max=jnp.array(ee_max),
+                    wb_min=jnp.array(wb_min),
+                    wb_max=jnp.array(wb_max),
+                    experiment_title=job["experiment_title"],
+                    prompt_version=p_ver,
+                )
+                model_name = model.replace(":", "_")
+                output_path = os.path.join(job["output_dir"], "llm_res", model_name)
+                os.makedirs(output_path, exist_ok=True)
+
+                met.save_barriers_to_csv(sim_data, output_dir=output_path)
+
+            except Exception as e:
+                print(f"    Error during barrier generation under {p_ver}: {e}")
 
 
 if __name__ == "__main__":
