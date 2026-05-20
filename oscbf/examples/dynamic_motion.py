@@ -15,6 +15,9 @@ from functools import partial
 
 import numpy as np
 import jax
+import pandas as pd
+import ast
+import os
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 # import matplotlib.pyplot as plt
@@ -44,8 +47,8 @@ from oscbf.utils.visualization import create_box
 
 DATA_DIR = "oscbf/experiments/data/"
 SHOW_IMAGES = True
-name_date = "dynamic_motion_res_19_05"
-SAVE_DATA = False
+name_date = "dynamic_motion_res_llama3.1_70b"
+SAVE_DATA = True
 PAUSE_FOR_PICTURES = False
 RECORD_VIDEO = False
 PICTURE_IDXS = [1000, 1250, 1600, 1900, 2200]
@@ -266,18 +269,44 @@ def main(control_method="torque"):
     # print(prompt)
 
     # integration with llama 3.1
-    model = "llama3.1"
-    print(f"Generating Barrier from {model}")
-    pos_min, pos_max, wb_min, wb_max = generate_barrier(
-        user_prompt=prompt, sin_traj=True
-    )
-    print("Barriers Generated: ee:", pos_min, pos_max)
-    print("Barriers Generated: whole body:", wb_min, wb_max)
-    # for pick and drop
+    # model = "llama3.1"
+    # print(f"Generating Barrier from {model}")
+    # pos_min, pos_max, wb_min, wb_max = generate_barrier(
+    #     user_prompt=prompt, sin_traj=True
+    # )
+    # print("Barriers Generated: ee:", pos_min, pos_max)
+    # print("Barriers Generated: whole body:", wb_min, wb_max)
+
+    # for pick and drop from claude
     # pos_min = (0.25, -0.7, -0.05)
     # pos_max = (0.65,  0.7,  0.75)
     # wb_min  = (-0.34, -0.70, -0.20)
     # wb_max  = ( 0.85,  0.70,  0.75)
+
+    # tests for llm results
+    # File path
+    folder = r"C:\Users\elish\Desktop\Aims Project\results\llm_res\llama3.1_70b"
+    filename = "2026-05-20_Dynamic_Motion_llama3.1_70b_v2_barriers.csv"
+    filepath = os.path.join(folder, filename)
+
+    # Read CSV
+    df = pd.read_csv(filepath)
+
+    # Convert list columns from strings to actual lists
+    list_cols = ["EE_Min", "EE_Max", "WB_Min", "WB_Max"]
+    for col in list_cols:
+        df[col] = df[col].apply(ast.literal_eval)
+
+    # Format and print results
+    for _, row in df.iterrows():
+        print(f"\nExperiment:     {row['Experiment']}")
+        print(f"Prompt Version: {row['Prompt Version']}")
+
+        # Format each list to 2 decimal places as a tuple
+        pos_min = tuple(round(v, 2) for v in row["EE_Min"])
+        pos_max = tuple(round(v, 2) for v in row["EE_Max"])
+        wb_min = tuple(round(v, 2) for v in row["WB_Min"])
+        wb_max = tuple(round(v, 2) for v in row["WB_Max"])
 
     # NOTE: This term has a noticeable impact on the performance for this demo.
     # It's often neglected due to computational demands and model error

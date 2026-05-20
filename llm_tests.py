@@ -14,9 +14,11 @@ import sys
 
 def run_tests(model="llama3.1:70b"):
 
+    model_name = model.replace(":", "_")
+
     # Examples from codebase: dynamic motion, multiple safety condition, cluttered tabletop, cluttered tabletop custom
     dynamic_motion = {
-        "experiment_title": f"Dynamic_Motion_{model}",
+        "experiment_title": f"Dynamic_Motion_{model_name}",
         "ee_start": [0.24, 0.0, 0.429],
         "target_start": [0.37, 0.49, 0.45],
         "amplitude": [0.0, 0.14, 0.0],
@@ -28,7 +30,7 @@ def run_tests(model="llama3.1:70b"):
 
     # Multiple Safety Conditions
     multiple_safety = {
-        "experiment_title": f"Multiple_Safety_Conditions_{model}",
+        "experiment_title": f"Multiple_Safety_Conditions_{model_name}",
         "ee_start": [0.24, 0.0, 0.429],
         "target_start": [0.4, 0.0, 0.35],
         "amplitude": [0.0, 0.25, 0.0],
@@ -55,7 +57,7 @@ def run_tests(model="llama3.1:70b"):
     cluttered_collision_radii = all_collision_radii[:25].tolist()
 
     cluttered_tabletop = {
-        "experiment_title": f"Cluttered_Tabletop_{model}",
+        "experiment_title": f"Cluttered_Tabletop_{model_name}",
         "ee_start": [0.24, 0.0, 0.429],
         "target_start": [0.4, 0.0, 0.35],
         "amplitude": [0.0, 0.25, -0.15],
@@ -84,7 +86,7 @@ def run_tests(model="llama3.1:70b"):
     cluttered_custom_collision_radii = all_collision_radii_custom[:3].tolist()
 
     cluttered_tabletop_custom = {
-        "experiment_title": f"Cluttered_Tabletop_Custom_{model}",
+        "experiment_title": f"Cluttered_Tabletop_Custom_{model_name}",
         "ee_start": [0.24, 0.0, 0.429],
         "target_start": [0.4, 0.0, 0.35],
         "amplitude": [0.0, 0.25, -0.15],
@@ -181,7 +183,7 @@ def run_tests(model="llama3.1:70b"):
                     experiment_title=job["experiment_title"],
                     prompt_version=p_ver,
                 )
-                model_name = model.replace(":", "_")
+
                 output_path = os.path.join(job["output_dir"], "llm_res", model_name)
                 os.makedirs(output_path, exist_ok=True)
 
