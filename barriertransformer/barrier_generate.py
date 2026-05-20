@@ -230,7 +230,6 @@ OUTPUT — respond ONLY with JSON:
 """
 
 
-
 # sys_prompt_new_with_example = """You are a robotics safety expert for the Franka Emika Panda robot arm. Generate TWO minimal
 # axis-aligned safety barriers for a sinusoidal tracking task.
 
@@ -452,7 +451,10 @@ def create_prompt(ee_pos, targ_pos, targ_amp, targ_freq):
     Generate both the minimal EE barrier and the minimal body barrier following the system prompt rules.
     """
     return prompt
-#Generate both the minimal EE barrier and the minimal body barrier following the system prompt rules.
+
+
+# Generate both the minimal EE barrier and the minimal body barrier following the system prompt rules.
+
 
 def create_prompt_pnp(ee_pos, targ_pos, waypoint, timestep):
     prompt = f"""
@@ -471,9 +473,11 @@ def create_prompt_pnp(ee_pos, targ_pos, waypoint, timestep):
     """
     return prompt
 
-def create_prompt_col(ee_pos, targ_pos, targ_amp, targ_freq, 
-                  collision_centers=None, collision_radii=None):
-    
+
+def create_prompt_col(
+    ee_pos, targ_pos, targ_amp, targ_freq, collision_centers=None, collision_radii=None
+):
+
     if collision_centers is None or collision_radii is None:
         collision_str = "NONE"
         # hint = "There are no collision objects — do not reduce the body barrier."
@@ -499,6 +503,7 @@ def create_prompt_col(ee_pos, targ_pos, targ_amp, targ_freq,
     Generate both the minimal EE barrier and the minimal body barrier following the system prompt rules.
     """
     return prompt
+
 
 def create_prompt_col_old(
     base_pos, ee_pos, targ_pos, targ_amp, targ_freq, coll_cen, coll_rad
@@ -604,40 +609,83 @@ def get_min_max(center: list, lengths: list):
 
 
 def generate_barrier(
-    user_prompt: str = dynamic_motion_prompt, model_name: str = "llama3.1", sin_traj = True
+    user_prompt: str = dynamic_motion_prompt,
+    model_name: str = "llama3.1",
+    sin_traj=True,
 ):
-    
-  if sin_traj: #sys_prompt_wose, sys_prompt_new_no_example
-    barrier = extract_barrier(
-        prompt_text=user_prompt, model_name=model_name, system_prompt=sys_prompt_new_no_example
-    )
-    ee_cen, ee_lens, wb_cen, wb_lens = barrier
-    print(
-        f"Barrier parameters generated from {model_name}, end-effector barrier center: {ee_cen}, lengths: {ee_lens}"
-    )
-    print(
-        f"Barrier parameters generated from {model_name}, whole-body barrier center: {wb_cen}, lengths: {wb_lens}"
-    )
-    ee_min, ee_max = get_min_max(ee_cen, ee_lens)
-    wb_min, wb_max = get_min_max(wb_cen, wb_lens)
-    return tuple(ee_min), tuple(ee_max), tuple(wb_min), tuple(wb_max)
 
-  else:
-    barrier = extract_barrier(
-        prompt_text=user_prompt, model_name=model_name, system_prompt=sys_prompt_new_pnp
-    )
-    ee_cen, ee_lens, wb_cen, wb_lens = barrier
-    print(
-        f"Barrier parameters generated from {model_name}, end-effector barrier center: {ee_cen}, lengths: {ee_lens}"
-    )
-    print(
-        f"Barrier parameters generated from {model_name}, whole-body barrier center: {wb_cen}, lengths: {wb_lens}"
-    )
-    ee_min, ee_max = get_min_max(ee_cen, ee_lens)
-    wb_min, wb_max = get_min_max(wb_cen, wb_lens)
-    return tuple(ee_min), tuple(ee_max), tuple(wb_min), tuple(wb_max)
+    if sin_traj:  # sys_prompt_wose, sys_prompt_new_no_example
+        barrier = extract_barrier(
+            prompt_text=user_prompt,
+            model_name=model_name,
+            system_prompt=sys_prompt_new_no_example,
+        )
+        ee_cen, ee_lens, wb_cen, wb_lens = barrier
+        print(
+            f"Barrier parameters generated from {model_name}, end-effector barrier center: {ee_cen}, lengths: {ee_lens}"
+        )
+        print(
+            f"Barrier parameters generated from {model_name}, whole-body barrier center: {wb_cen}, lengths: {wb_lens}"
+        )
+        ee_min, ee_max = get_min_max(ee_cen, ee_lens)
+        wb_min, wb_max = get_min_max(wb_cen, wb_lens)
+        return tuple(ee_min), tuple(ee_max), tuple(wb_min), tuple(wb_max)
+
+    else:
+        barrier = extract_barrier(
+            prompt_text=user_prompt,
+            model_name=model_name,
+            system_prompt=sys_prompt_new_pnp,
+        )
+        ee_cen, ee_lens, wb_cen, wb_lens = barrier
+        print(
+            f"Barrier parameters generated from {model_name}, end-effector barrier center: {ee_cen}, lengths: {ee_lens}"
+        )
+        print(
+            f"Barrier parameters generated from {model_name}, whole-body barrier center: {wb_cen}, lengths: {wb_lens}"
+        )
+        ee_min, ee_max = get_min_max(ee_cen, ee_lens)
+        wb_min, wb_max = get_min_max(wb_cen, wb_lens)
+        return tuple(ee_min), tuple(ee_max), tuple(wb_min), tuple(wb_max)
 
 
+def generate_barrier_old(
+    user_prompt: str = dynamic_motion_prompt, model_name: str = "llama3.1", ver01=True
+):
+
+    if ver01:  # sys_prompt_wose, sys_prompt_new_no_example
+        barrier = extract_barrier(
+            prompt_text=user_prompt,
+            model_name=model_name,
+            system_prompt=sys_prompt,
+        )
+        ee_cen, ee_lens, wb_cen, wb_lens = barrier
+        print(
+            f"Barrier parameters generated from {model_name}, end-effector barrier center: {ee_cen}, lengths: {ee_lens}"
+        )
+        print(
+            f"Barrier parameters generated from {model_name}, whole-body barrier center: {wb_cen}, lengths: {wb_lens}"
+        )
+        ee_min, ee_max = get_min_max(ee_cen, ee_lens)
+        wb_min, wb_max = get_min_max(wb_cen, wb_lens)
+        return tuple(ee_min), tuple(ee_max), tuple(wb_min), tuple(wb_max)
+
+    else:
+        barrier = extract_barrier(
+            prompt_text=user_prompt,
+            model_name=model_name,
+            system_prompt=sys_prompt_wose,
+        )
+        ee_cen, ee_lens, wb_cen, wb_lens = barrier
+        print(
+            f"Barrier parameters generated from {model_name}, end-effector barrier center: {ee_cen}, lengths: {ee_lens}"
+        )
+        print(
+            f"Barrier parameters generated from {model_name}, whole-body barrier center: {wb_cen}, lengths: {wb_lens}"
+        )
+        ee_min, ee_max = get_min_max(ee_cen, ee_lens)
+        wb_min, wb_max = get_min_max(wb_cen, wb_lens)
+        return tuple(ee_min), tuple(ee_max), tuple(wb_min), tuple(wb_max)
 
 
 # if __name__ == "__main__":

@@ -45,7 +45,7 @@ from oscbf.utils.visualization import create_box
 DATA_DIR = "oscbf/experiments/data/"
 SHOW_IMAGES = True
 name_date = "dynamic_motion_res_19_05"
-SAVE_DATA = True 
+SAVE_DATA = False
 PAUSE_FOR_PICTURES = False
 RECORD_VIDEO = False
 PICTURE_IDXS = [1000, 1250, 1600, 1900, 2200]
@@ -220,7 +220,7 @@ def main(control_method="torque"):
     frequency = (0, 0.59, 0)
     sinusoid_init_pos = (0.37, 0.49, 0.45)
 
-    #old values 
+    # old values
     # amplitude = (0.25, 0, 0)
     # frequency = (5, 0, 0)
     # sinusoid_init_pos = (0.55, 0, 0.45)
