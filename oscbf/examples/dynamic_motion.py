@@ -284,10 +284,11 @@ def main(control_method="torque"):
     # wb_max  = ( 0.85,  0.70,  0.75)
 
     # tests for llm results
-    # File path
-    folder = r"C:\Users\elish\Desktop\Aims Project\results\llm_res\llama3.1_70b"
+    # Dynamically locate the results folder relative to this script's path
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "llama3.1_70b")
     filename = "2026-05-20_Dynamic_Motion_llama3.1_70b_v2_barriers.csv"
-    filepath = os.path.join(folder, filename)
+    filepath = os.path.normpath(os.path.join(folder, filename))
 
     # Read CSV
     df = pd.read_csv(filepath)
