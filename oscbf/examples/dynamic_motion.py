@@ -45,10 +45,10 @@ from oscbf.core.controllers import (
 )
 from oscbf.utils.visualization import create_box
 
-DATA_DIR = "oscbf/experiments/data/"
+DATA_DIR = "results/new/dymo"
 SHOW_IMAGES = True
 name_date = "dynamic_motion_res_llama3.1_70b"
-SAVE_DATA = True
+SAVE_DATA = False
 PAUSE_FOR_PICTURES = False
 RECORD_VIDEO = False
 PICTURE_IDXS = [1000, 1250, 1600, 1900, 2200]
@@ -535,7 +535,7 @@ def main(control_method="torque"):
         joint_sphere_radii=joint_sphere_radii,
         collision_spheres=None,
         collision_sphere_radii=None,
-        experiment_title="Dynamic_Motion_res_19_05",
+        experiment_title="Dynamic_Motion_res",
         prompt_version="v2",
     )
     #
