@@ -284,6 +284,13 @@ def main(control_method="torque", num_bodies=3):
     # print(collision_radii)
     collision_data = {"positions": collision_pos, "radii": collision_radii}
 
+    cus_col_pos = [0.4, 0.3, 0.55]
+    cus_col_len = [0.2, 0.2, 0.2]
+
+    # Combine sphere obstacles and the box obstacle (approximated as a sphere) for the prompt
+    all_col_pos = collision_pos.tolist() + [cus_col_pos]
+    all_col_rad = collision_radii.tolist() + [cus_col_len[0] / 2.0]
+
     sinusoid_init_pos = (0.4, 0, 0.35)
     amplitude = (0, 0.25, -0.15)
     frequency = (0, 5, 2.5)
@@ -314,8 +321,8 @@ def main(control_method="torque", num_bodies=3):
         sinusoid_init_pos,
         amplitude,
         frequency,
-        collision_pos,
-        collision_radii,
+        all_col_pos,
+        all_col_rad,
     )
 
     # ee_pos_min = np.array([0.15, -0.25, 0.25])
@@ -392,10 +399,10 @@ def main(control_method="torque", num_bodies=3):
 
     # create a box obstacle
     create_box(
-        pos=[0.4, 0.3, 0.55],  # Center position [x, y, z] in world frame
+        pos=cus_col_pos,  # Center position [x, y, z] in world frame
         orn=[0, 0, 0, 1],  # Orientation quaternion [x, y, z, w]
         mass=0.0,  # Setting mass=0 makes it a fixed/static object
-        sidelengths=[0.2, 0.2, 0.2],  # Dimensions along [x, y, z] axes
+        sidelengths=cus_col_len,  # Dimensions along [x, y, z] axes
         use_collision=True,  # True: Robot physically collides with it in PyBullet
         # False: Purely visual (ghost object)
         rgba=[0.867, 0.016, 0.016, 1],  # Color [R, G, B, Alpha]

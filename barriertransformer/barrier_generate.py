@@ -484,7 +484,22 @@ def create_prompt(ee_pos, targ_pos, targ_amp, targ_freq):
 # Generate both the minimal EE barrier and the minimal body barrier following the system prompt rules.
 
 
-def create_prompt_pnp(ee_pos, targ_pos, waypoint, timestep):
+def create_prompt_pnp(
+    ee_pos, targ_pos, waypoint, timestep, collision_centers=None, collision_radii=None
+):
+    if (
+        collision_centers is None
+        or collision_radii is None
+        or len(collision_centers) == 0
+    ):
+        collision_str = "NONE"
+    else:
+        collision_objects = [
+            {"center": center, "radius": float(radius)}
+            for center, radius in zip(collision_centers, collision_radii)
+        ]
+        collision_str = str(collision_objects)
+
     prompt = f"""
     A Franka Emika Panda robot arm is mounted with its base at origin (0, 0, 0).
     It is performing a pick and drop linear set of trajectories
@@ -495,7 +510,7 @@ def create_prompt_pnp(ee_pos, targ_pos, waypoint, timestep):
     wapoints:         {waypoint}
     timestep of waypoints: {timestep}
 
-    collision_objects: NONE
+    collision_objects: {collision_str}
 
     Generate both the minimal EE barrier and the minimal body barrier following the system prompt rules for the pick and drop task.
     """
@@ -515,7 +530,6 @@ def create_prompt_col(
             for center, radius in zip(collision_centers, collision_radii)
         ]
         collision_str = str(collision_objects)
-        # hint = "Collision objects are present — apply avoidance logic to both barriers."
 
     prompt = f"""
     A Franka Emika Panda robot arm is mounted with its base at origin (0, 0, 0).
