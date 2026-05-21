@@ -39,7 +39,7 @@ from oscbf.core.controllers import PoseTaskTorqueController
 RECORD_VIDEO = False
 SAVE_DATA = False
 SHOW_IMAGES = True
-name_date = "mult_saf_con_14_0.5"
+name_date = "mult_saf_res_llama_latest_v2"
 
 
 @jax.tree_util.register_static
@@ -188,9 +188,9 @@ def main():
     collision_pos = np.array([[0.5, 0.5, 0.5]])
     collision_radii = np.array([0.3])
 
-    sinusoid_init_pos = (0.4, 0, 0.35)
-    amplitude = (0, 0.25, 0)
-    frequency = (0, 5, 0)
+    sinusoid_init_pos = (0.39, 0.37, 0.33)
+    amplitude = (0, 0, 0.29)
+    frequency = (0, 0, 4.18)
 
     # prompt = barrier.create_prompt_col_old(
     #     ([0, 0, 0]),
@@ -214,19 +214,19 @@ def main():
     # print(prompt)
 
     # integration with llama 3.1
-    model = "llama3.1:latest"
-    print(f"Generating Barrier from {model}")
-    ee_pos_min, ee_pos_max, wb_pos_min, wb_pos_max = barrier.generate_barrier(
-        user_prompt=prompt
-    )
-    print("Barriers Generated: ee:", ee_pos_min, ee_pos_max)
-    print("Barriers Generated: whole body:", wb_pos_min, wb_pos_max)
+    # model = "llama3.1:latest"
+    # print(f"Generating Barrier from {model}")
+    # ee_pos_min, ee_pos_max, wb_pos_min, wb_pos_max = barrier.generate_barrier(
+    #     user_prompt=prompt
+    # )
+    # print("Barriers Generated: ee:", ee_pos_min, ee_pos_max)
+    # print("Barriers Generated: whole body:", wb_pos_min, wb_pos_max)
 
     # tests for llm results
     # Dynamically locate the results folder relative to this script's path
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "llama3.1_70b")
-    filename = "2026-05-20_Dynamic_Motion_llama3.1_70b_v2_barriers.csv"
+    folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "llama3.1_latest")
+    filename = "2026-05-20_Multiple_Safety_Conditions_20_05_v2_barriers.csv"
     filepath = os.path.normpath(os.path.join(folder, filename))
 
     # Read CSV
@@ -243,10 +243,10 @@ def main():
         print(f"Prompt Version: {row['Prompt Version']}")
 
         # Format each list to 2 decimal places as a tuple
-        pos_min = tuple(round(v, 2) for v in row["EE_Min"])
-        pos_max = tuple(round(v, 2) for v in row["EE_Max"])
-        wb_min = tuple(round(v, 2) for v in row["WB_Min"])
-        wb_max = tuple(round(v, 2) for v in row["WB_Max"])
+        ee_pos_min = tuple(round(v, 2) for v in row["EE_Min"])
+        ee_pos_max = tuple(round(v, 2) for v in row["EE_Max"])
+        wb_pos_min = tuple(round(v, 2) for v in row["WB_Min"])
+        wb_pos_max = tuple(round(v, 2) for v in row["WB_Max"])
 
     collision_data = {"positions": collision_pos, "radii": collision_radii}
     config = CombinedConfig(
@@ -330,7 +330,7 @@ def main():
         pixel_width,
         pixel_height,
         show_plots=SHOW_IMAGES,
-        name=f"test_mul_saf/{name_date}",
+        name=f"results/new/mulsafe/{name_date}",
         folder="test_dynamotion_plots",
         save_image=SAVE_DATA,
     )
@@ -345,7 +345,7 @@ def main():
     if RECORD_VIDEO:
         # for saving the video in the env
         env.client.startStateLogging(
-            env.client.STATE_LOGGING_VIDEO_MP4, f"test_mul_saf/{name_date}_video.mp4"
+            env.client.STATE_LOGGING_VIDEO_MP4, f"results/new/mulsafe/{name_date}_video.mp4"
         )
 
     duration = 11.0
@@ -382,7 +382,7 @@ def main():
         ts,
         show_plots=SHOW_IMAGES,
         save_image=SAVE_DATA,
-        name=f"test_mul_saf/{name_date}_links",
+        name=f"results/new/mulsafe/{name_date}_links",
     )
 
     # --- METRICS INTEGRATION ---
@@ -412,20 +412,20 @@ def main():
         joint_sphere_radii=joint_sphere_radii,
         collision_spheres=collision_pos,
         collision_sphere_radii=collision_radii,
-        experiment_title="Multiple_Safety_Conditions_14_05",
-        prompt_version="v1",
+        experiment_title="Multiple_Safety_Conditions_res_llama_latest_v2",
+        prompt_version="v2",
     )
 
     if SAVE_DATA:
-        met.generate_report(sim_data, output_dir="metrics")
-        met.save_barriers_to_csv(sim_data, output_dir="results")
+        met.generate_report(sim_data, output_dir="results/new/mulsafe")
+        met.save_barriers_to_csv(sim_data, output_dir="results/new/mulsafe")
 
     mean_tau = met.compute_mean_abs_torque(sim_data.u_actual)
     vis.plot_per_joint_torque(
         mean_tau,
         show_plots=SHOW_IMAGES,
         save_image=SAVE_DATA,
-        name=f"test_mul_saf/{name_date}_jtorque",
+        name=f"results/new/mulsafe/{name_date}_jtorque",
     )
     vis.plot_barrier_evolution(
         time=ts,
@@ -434,7 +434,7 @@ def main():
         u_unsafe=sim_data.u_nominal,
         show_plots=SHOW_IMAGES,
         save_image=SAVE_DATA,
-        name=f"test_mul_saf/{name_date}_hevolve",
+        name=f"results/new/mulsafe/{name_date}_hevolve",
     )
 
 
