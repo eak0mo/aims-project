@@ -20,6 +20,9 @@ import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 from cbfpy import CBF
+import pandas as pd
+import ast
+import os
 
 sys.path.append("././")
 # importing custom library
@@ -218,6 +221,32 @@ def main():
     )
     print("Barriers Generated: ee:", ee_pos_min, ee_pos_max)
     print("Barriers Generated: whole body:", wb_pos_min, wb_pos_max)
+
+    # tests for llm results
+    # Dynamically locate the results folder relative to this script's path
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "llama3.1_70b")
+    filename = "2026-05-20_Dynamic_Motion_llama3.1_70b_v2_barriers.csv"
+    filepath = os.path.normpath(os.path.join(folder, filename))
+
+    # Read CSV
+    df = pd.read_csv(filepath)
+
+    # Convert list columns from strings to actual lists
+    list_cols = ["EE_Min", "EE_Max", "WB_Min", "WB_Max"]
+    for col in list_cols:
+        df[col] = df[col].apply(ast.literal_eval)
+
+    # Format and print results
+    for _, row in df.iterrows():
+        print(f"\nExperiment:     {row['Experiment']}")
+        print(f"Prompt Version: {row['Prompt Version']}")
+
+        # Format each list to 2 decimal places as a tuple
+        pos_min = tuple(round(v, 2) for v in row["EE_Min"])
+        pos_max = tuple(round(v, 2) for v in row["EE_Max"])
+        wb_min = tuple(round(v, 2) for v in row["WB_Min"])
+        wb_max = tuple(round(v, 2) for v in row["WB_Max"])
 
     collision_data = {"positions": collision_pos, "radii": collision_radii}
     config = CombinedConfig(

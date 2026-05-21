@@ -366,47 +366,75 @@ OUTPUT — respond ONLY with JSON:
 # }
 # """
 
-sys_prompt_new_pnp = """You are a robotics safety expert for the Franka Emika Panda robot arm. Generate TWO
-minimal axis-aligned safety barriers for a pick and place trajectory.
+sys_prompt_new_pnp = """You are a robotics safety expert for the Franka Emika Panda robot arm.
+Your job is to look at a pick and place trajectory and generate TWO tight axis-aligned safety barriers
+that are as small as possible while still being safe.
 
 FRANKA EMIKA PANDA WORKSPACE LIMITS (meters):
   x ∈ [-0.855, 0.855], y ∈ [-0.855, 0.855], z ∈ [-0.1, 1.19]
-  Maximum whole-body barrier: center [0.0, 0.0, 0.545], lengths [1.71, 1.71, 1.29]
 
 INPUTS (all in meters):
   - ee_start:     initial end-effector position [x, y, z]
   - base_pos:     robot base position [x, y, z] (default [0, 0, 0])
   - target_start: initial target position [x, y, z]
-  - waypoints:    ordered list of [x, y, z] positions the end-effector passes through
+  - waypoints:    ordered list of [x, y, z] positions the end-effector visits in sequence
   - timesteps:    timestamp in seconds for each waypoint
 
-STEP 1 — FIND THE TRAJECTORY BOX:
-  List every position: ee_start, target_start, and all waypoints.
-  Per axis i:
-  - pos_min[i] = minimum value across all positions
-  - pos_max[i] = maximum value across all positions
+HOW TO THINK ABOUT THIS:
 
-STEP 2 — EE BARRIER:
-  Per axis i:
-  - ee_min[i] = pos_min[i] - 0.1
-  - ee_max[i] = pos_max[i] + 0.1
-  - center[i] = (ee_min[i] + ee_max[i]) / 2
-  - length[i] = ee_max[i] - ee_min[i]
+  Before doing anything else, write out every single position the robot visits as a flat list:
+  ee_start, target_start, waypoint 1, waypoint 2, waypoint 3 ... and so on.
+  Every position in this list matters equally. No position is more important than another.
+  The barriers must cover ALL of them, not just the first or last or most obvious one.
 
-STEP 3 — BODY BARRIER:
-  Per axis i:
-  - Start from ee_min[i] and ee_max[i].
-  - Expand to include base_pos[i] if outside the EE barrier.
-  - wb_min[i] = min(ee_min[i], base_pos[i]) - 0.2
-  - wb_max[i] = max(ee_max[i], base_pos[i]) + 0.2
-  - maximum is workspace limits.
-  - center[i] = (wb_min[i] + wb_max[i]) / 2
-  - length[i] = wb_max[i] - wb_min[i]
-  - Must be strictly larger than EE barrier on all axes.
+  Then for each axis separately — X, Y, and Z — scan down the entire list and find the
+  single lowest value and the single highest value that appear anywhere in the list on that
+  axis. The barrier on that axis must stretch all the way from that lowest value to that
+  highest value. If the barrier does not reach both ends, it is wrong.
+
+EE BARRIER — spans the full trajectory from end to end:
+  After scanning all positions per axis and finding the lowest and highest values:
+  - The barrier starts at the lowest value minus 0.1 m on that axis.
+  - The barrier ends at the highest value plus 0.1 m on that axis.
+  - The center is exactly halfway between those two ends.
+  - The length is the distance from the start to the end.
+  The barrier must be symmetric around the midpoint of the motion on each axis — not offset
+  toward any single position. If the center does not sit at the midpoint of the full range
+  of motion, it is wrong. The robot base does not influence this barrier in any way.
+
+BODY BARRIER — a safe room for the entire robot arm to operate:
+  The body barrier must visually contain the entire robot — base, every link, every joint,
+  and the end-effector — at every moment of the motion. It is always the larger of the two
+  barriers and should never clip any part of the robot.
+
+  To build it, start from the robot base position and expand outward in both directions on
+  each axis until the entire EE barrier is comfortably contained inside, then add 0.2 m of
+  breathing room beyond the furthest point on both the low end and the high end of each axis.
+
+  On each axis ask: what is the furthest point the robot reaches in the negative direction
+  — is it the base or the low end of the EE barrier? What is the furthest point in the
+  positive direction — is it the base or the high end of the EE barrier? The body barrier
+  spans from the furthest negative point minus 0.2 m to the furthest positive point plus
+  0.2 m on each axis.
+
+  The body barrier should always be noticeably larger than the EE barrier on every single
+  axis. If on any axis the body barrier is the same size or smaller than the EE barrier,
+  it is wrong — expand it. The arm links and joints always sweep a wider volume than the
+  end-effector path alone, so the body barrier must reflect this on every axis.
+
+MINIMALITY CHECK:
+  Before writing the answer, ask yourself on each axis:
+  - Did you scan every position in the full list — ee_start, target_start, and every waypoint?
+    If any position was skipped, the barrier may be offset or too small — rescan.
+  - Does the EE barrier center sit exactly at the midpoint of the full motion range on each axis?
+    If it is offset toward any single position, it is wrong — recompute the center.
+  - Does the EE barrier reach from the lowest position minus 0.2 m to the highest position
+    plus 0.2 m? If it is shorter on either end, it is too small — extend it.
+  - Is the body barrier noticeably larger than the EE barrier on every axis? If not, expand it.
 
 OUTPUT — respond ONLY with JSON:
 {
-  "reasoning": "<per axis: list all positions → pos_min, pos_max → ee_min, ee_max → wb_min, wb_max>",
+  "reasoning": "<list every position explicitly, then per axis: lowest value, highest value, EE barrier start and end, center, body barrier start and end, center>",
   "ee_center":  [x, y, z],
   "ee_lengths": [lx, ly, lz],
   "wb_center":  [x, y, z],

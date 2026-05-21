@@ -232,7 +232,7 @@ def main(control_method="torque"):
     # prompt = create_prompt(
     #     ee_init_pos, sinusoid_init_pos, amplitude, frequency
     # )
-    prompt = create_prompt_col(ee_init_pos, sinusoid_init_pos, amplitude, frequency)
+    # prompt = create_prompt_col(ee_init_pos, sinusoid_init_pos, amplitude, frequency)
 
     # prompt = create_prompt_old(
     #     ee_init_pos, sinusoid_init_pos, amplitude, frequency
@@ -261,21 +261,18 @@ def main(control_method="torque"):
         ]
     )
     # pick and drop prompt
-    # prompt = create_prompt_pnp(ee_init_pos, way_point_init_post, waypoints, times)
-
-    # prompt = create_prompt_col(
-    #     ee_init_pos, sinusoid_init_pos, amplitude, frequency
-    # )
+    prompt = create_prompt_pnp(ee_init_pos, way_point_init_post, waypoints, times)
     # print(prompt)
+    
 
     # integration with llama 3.1
-    # model = "llama3.1"
-    # print(f"Generating Barrier from {model}")
-    # pos_min, pos_max, wb_min, wb_max = generate_barrier(
-    #     user_prompt=prompt, sin_traj=True
-    # )
-    # print("Barriers Generated: ee:", pos_min, pos_max)
-    # print("Barriers Generated: whole body:", wb_min, wb_max)
+    model = "llama3.1"
+    print(f"Generating Barrier from {model}")
+    pos_min, pos_max, wb_min, wb_max = generate_barrier(
+        user_prompt=prompt, sin_traj=False
+    )
+    print("Barriers Generated: ee:", pos_min, pos_max)
+    print("Barriers Generated: whole body:", wb_min, wb_max)
 
     # for pick and drop from claude
     # pos_min = (0.25, -0.7, -0.05)
@@ -285,29 +282,29 @@ def main(control_method="torque"):
 
     # tests for llm results
     # Dynamically locate the results folder relative to this script's path
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "llama3.1_70b")
-    filename = "2026-05-20_Dynamic_Motion_llama3.1_70b_v2_barriers.csv"
-    filepath = os.path.normpath(os.path.join(folder, filename))
+    # script_dir = os.path.dirname(os.path.abspath(__file__))
+    # folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "llama3.1_70b")
+    # filename = "2026-05-20_Dynamic_Motion_llama3.1_70b_v2_barriers.csv"
+    # filepath = os.path.normpath(os.path.join(folder, filename))
 
-    # Read CSV
-    df = pd.read_csv(filepath)
+    # # Read CSV
+    # df = pd.read_csv(filepath)
 
-    # Convert list columns from strings to actual lists
-    list_cols = ["EE_Min", "EE_Max", "WB_Min", "WB_Max"]
-    for col in list_cols:
-        df[col] = df[col].apply(ast.literal_eval)
+    # # Convert list columns from strings to actual lists
+    # list_cols = ["EE_Min", "EE_Max", "WB_Min", "WB_Max"]
+    # for col in list_cols:
+    #     df[col] = df[col].apply(ast.literal_eval)
 
-    # Format and print results
-    for _, row in df.iterrows():
-        print(f"\nExperiment:     {row['Experiment']}")
-        print(f"Prompt Version: {row['Prompt Version']}")
+    # # Format and print results
+    # for _, row in df.iterrows():
+    #     print(f"\nExperiment:     {row['Experiment']}")
+    #     print(f"Prompt Version: {row['Prompt Version']}")
 
-        # Format each list to 2 decimal places as a tuple
-        pos_min = tuple(round(v, 2) for v in row["EE_Min"])
-        pos_max = tuple(round(v, 2) for v in row["EE_Max"])
-        wb_min = tuple(round(v, 2) for v in row["WB_Min"])
-        wb_max = tuple(round(v, 2) for v in row["WB_Max"])
+    #     # Format each list to 2 decimal places as a tuple
+    #     pos_min = tuple(round(v, 2) for v in row["EE_Min"])
+    #     pos_max = tuple(round(v, 2) for v in row["EE_Max"])
+    #     wb_min = tuple(round(v, 2) for v in row["WB_Min"])
+    #     wb_max = tuple(round(v, 2) for v in row["WB_Max"])
 
     # NOTE: This term has a noticeable impact on the performance for this demo.
     # It's often neglected due to computational demands and model error
@@ -322,20 +319,20 @@ def main(control_method="torque"):
     torque_cbf = CBF.from_config(torque_config)
     velocity_config = EESafeSetVelocityConfig(robot, pos_min, pos_max)
     velocity_cbf = CBF.from_config(velocity_config)
-    traj = SinusoidalTaskTrajectory(
-        init_pos=sinusoid_init_pos,
-        init_rot=np.array(
-            [
-                [1, 0, 0],
-                [0, -1, 0],
-                [0, 0, -1],
-            ]
-        ),
-        amplitude=amplitude,
-        angular_freq=frequency,
-        phase=(0, 0, 0),
-    )
-    # traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
+    # traj = SinusoidalTaskTrajectory(
+    #     init_pos=sinusoid_init_pos,
+    #     init_rot=np.array(
+    #         [
+    #             [1, 0, 0],
+    #             [0, -1, 0],
+    #             [0, 0, -1],
+    #         ]
+    #     ),
+    #     amplitude=amplitude,
+    #     angular_freq=frequency,
+    #     phase=(0, 0, 0),
+    # )
+    traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
     timestep = 1 / 1000
     bg_color = (1, 1, 1)
     if control_method == "torque":
