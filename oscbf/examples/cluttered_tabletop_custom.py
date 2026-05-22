@@ -16,6 +16,9 @@ import sys
 
 import numpy as np
 import jax
+import pandas as pd
+import ast
+import os
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
@@ -331,13 +334,39 @@ def main(control_method="torque", num_bodies=3):
     # wb_pos_max = np.array([0.75, 0.5, 1.0])
 
     # llm outputs
-    model = "llama3.1"
-    print(f"Generating Barrier from {model}")
-    ee_pos_min, ee_pos_max, wb_pos_min, wb_pos_max = barrier.generate_barrier(
-        user_prompt=prompt
-    )
-    print("Barriers Generated: ee:", ee_pos_min, ee_pos_max)
-    print("Barriers Generated: whole body:", wb_pos_min, wb_pos_max)
+    # model = "llama3.1"
+    # print(f"Generating Barrier from {model}")
+    # ee_pos_min, ee_pos_max, wb_pos_min, wb_pos_max = barrier.generate_barrier(
+    #     user_prompt=prompt
+    # )
+    # print("Barriers Generated: ee:", ee_pos_min, ee_pos_max)
+    # print("Barriers Generated: whole body:", wb_pos_min, wb_pos_max)
+
+    # tests for llm results
+    # Dynamically locate the results folder relative to this script's path
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "llama3.1_latest")
+    filename = "2026-05-20_Cluttered_Tabletop_Custom_20_05_v2_barriers.csv"
+    filepath = os.path.normpath(os.path.join(folder, filename))
+
+    # Read CSV
+    df = pd.read_csv(filepath)
+
+    # Convert list columns from strings to actual lists
+    list_cols = ["EE_Min", "EE_Max", "WB_Min", "WB_Max"]
+    for col in list_cols:
+        df[col] = df[col].apply(ast.literal_eval)
+
+    # Format and print results
+    for _, row in df.iterrows():
+        print(f"\nExperiment:     {row['Experiment']}")
+        print(f"Prompt Version: {row['Prompt Version']}")
+
+        # Format each list to 2 decimal places as a tuple
+        ee_pos_min = tuple(round(v, 2) for v in row["EE_Min"])
+        ee_pos_max = tuple(round(v, 2) for v in row["EE_Max"])
+        wb_pos_min = tuple(round(v, 2) for v in row["WB_Min"])
+        wb_pos_max = tuple(round(v, 2) for v in row["WB_Max"])
 
     torque_config = CollisionsConfig(
         robot,

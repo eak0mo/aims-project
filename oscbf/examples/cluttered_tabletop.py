@@ -16,6 +16,9 @@ import sys
 
 import numpy as np
 import jax
+import pandas as pd
+import ast
+import os
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
@@ -323,13 +326,41 @@ def main(control_method="torque", num_bodies=25):
     # )
 
     # llm outputs
-    model = "llama3.1"
-    print(f"Generating Barrier from {model}")
-    ee_pos_min, ee_pos_max, wb_pos_min, wb_pos_max = barrier.generate_barrier(
-        user_prompt=prompt, sin_traj=True
+    # model = "llama3.1"
+    # print(f"Generating Barrier from {model}")
+    # ee_pos_min, ee_pos_max, wb_pos_min, wb_pos_max = barrier.generate_barrier(
+    #     user_prompt=prompt, sin_traj=True
+    # )
+    # print("Barriers Generated: ee:", ee_pos_min, ee_pos_max)
+    # print("Barriers Generated: whole body:", wb_pos_min, wb_pos_max)
+
+    # tests for llm results
+    # Dynamically locate the results folder relative to this script's path
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    folder = os.path.join(
+        script_dir, "..", "..", "results", "llm_res", "llama3.1_latest"
     )
-    print("Barriers Generated: ee:", ee_pos_min, ee_pos_max)
-    print("Barriers Generated: whole body:", wb_pos_min, wb_pos_max)
+    filename = "2026-05-20_Cluttered_Tabletop_20_05_v2_barriers.csv"
+    filepath = os.path.normpath(os.path.join(folder, filename))
+
+    # Read CSV
+    df = pd.read_csv(filepath)
+
+    # Convert list columns from strings to actual lists
+    list_cols = ["EE_Min", "EE_Max", "WB_Min", "WB_Max"]
+    for col in list_cols:
+        df[col] = df[col].apply(ast.literal_eval)
+
+    # Format and print results
+    for _, row in df.iterrows():
+        print(f"\nExperiment:     {row['Experiment']}")
+        print(f"Prompt Version: {row['Prompt Version']}")
+
+        # Format each list to 2 decimal places as a tuple
+        ee_pos_min = tuple(round(v, 2) for v in row["EE_Min"])
+        ee_pos_max = tuple(round(v, 2) for v in row["EE_Max"])
+        wb_pos_min = tuple(round(v, 2) for v in row["WB_Min"])
+        wb_pos_max = tuple(round(v, 2) for v in row["WB_Max"])
 
     torque_config = CollisionsConfig(
         robot,
@@ -357,10 +388,6 @@ def main(control_method="torque", num_bodies=25):
         phase=(0, 0, 0),
     )
     # traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
-
-
-
-    
 
     velocity_config = CollisionsVelocityConfig(
         robot, z_min, collision_pos, collision_radii
@@ -403,7 +430,6 @@ def main(control_method="torque", num_bodies=25):
     #     rgba=[0.867, 0.016, 0.016, 1],  # Color [R, G, B, Alpha]
     #     client=env.client,  # Target the active PyBullet client instance
     # )
-    
 
     env.client.resetDebugVisualizerCamera(
         cameraDistance=1.40,
@@ -488,7 +514,8 @@ def main(control_method="torque", num_bodies=25):
 
     if RECORD_VIDEO:
         env.client.startStateLogging(
-            env.client.STATE_LOGGING_VIDEO_MP4, f"tabletop/original_{name_date}_video.mp4"
+            env.client.STATE_LOGGING_VIDEO_MP4,
+            f"tabletop/original_{name_date}_video.mp4",
         )
 
     duration = 11.0
