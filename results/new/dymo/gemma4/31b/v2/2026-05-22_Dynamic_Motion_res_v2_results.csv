@@ -1,0 +1,2 @@
+Experiment,Prompt Version,MTE_mean_all,MTE_std_all,MTE_mean_last_10s,MTE_std_last_10s,SVR_EE_%,CIA_EE_cumul_vol,CIA_EE_peak_vol,SVR_WB_%,CIA_WB_cumul_vol,CIA_WB_peak_vol,BAR_EE_vol,BAR_WB_vol,BAct_%,BAct_duration_s,TCE
+Dynamic_Motion_res,v2,0.021538025413604348,0.0710273740733248,0.0035160857694872174,0.005327522867772939,0.0,0.0,0.0,0.0,,,0.10879999999999997,3.8163359999999997,9.2,1.012,12973.665448292792
