@@ -38,7 +38,7 @@ from barriertransformer import barrier_generate as barrier
 from barriertransformer import visualization as vis
 from barriertransformer import metrics as met
 
-name_date = "cus_cluttered_14_05"
+name_date = "cus_cluttered_23_05"
 SHOW_PLOTS = True
 SAVE_DATA = False
 RECORD_VIDEO = False
@@ -294,9 +294,9 @@ def main(control_method="torque", num_bodies=3):
     all_col_pos = collision_pos.tolist() + [cus_col_pos]
     all_col_rad = collision_radii.tolist() + [cus_col_len[0] / 2.0]
 
-    sinusoid_init_pos = (0.4, 0, 0.35)
-    amplitude = (0, 0.25, -0.15)
-    frequency = (0, 5, 2.5)
+    sinusoid_init_pos = (0.34, 0.34, 0.34)
+    amplitude = (0.01, 0, 0.16)
+    frequency = (0.21, 0, 2.06)
 
     # waypoint/pick and drop traj
     # waypoints = np.array(
@@ -348,7 +348,7 @@ def main(control_method="torque", num_bodies=3):
     folder = os.path.join(
         script_dir, "..", "..", "results", "llm_res", "llama3.1_latest"
     )
-    filename = "2026-05-20_Cluttered_Tabletop_Custom_20_05_v2_barriers.csv"
+    filename = "2026-05-23_Cluttered_Tabletop_Custom_llama3.1_latest_v2_barriers.csv"
     filepath = os.path.normpath(os.path.join(folder, filename))
 
     # Read CSV
@@ -429,16 +429,16 @@ def main(control_method="torque", num_bodies=3):
         )
 
     # create a box obstacle
-    create_box(
-        pos=cus_col_pos,  # Center position [x, y, z] in world frame
-        orn=[0, 0, 0, 1],  # Orientation quaternion [x, y, z, w]
-        mass=0.0,  # Setting mass=0 makes it a fixed/static object
-        sidelengths=cus_col_len,  # Dimensions along [x, y, z] axes
-        use_collision=True,  # True: Robot physically collides with it in PyBullet
-        # False: Purely visual (ghost object)
-        rgba=[0.867, 0.016, 0.016, 1],  # Color [R, G, B, Alpha]
-        client=env.client,  # Target the active PyBullet client instance
-    )
+    # create_box(
+    #     pos=cus_col_pos,  # Center position [x, y, z] in world frame
+    #     orn=[0, 0, 0, 1],  # Orientation quaternion [x, y, z, w]
+    #     mass=0.0,  # Setting mass=0 makes it a fixed/static object
+    #     sidelengths=cus_col_len,  # Dimensions along [x, y, z] axes
+    #     use_collision=True,  # True: Robot physically collides with it in PyBullet
+    #     # False: Purely visual (ghost object)
+    #     rgba=[0.867, 0.016, 0.016, 1],  # Color [R, G, B, Alpha]
+    #     client=env.client,  # Target the active PyBullet client instance
+    # )
 
     env.client.resetDebugVisualizerCamera(
         cameraDistance=1.40,
@@ -503,7 +503,7 @@ def main(control_method="torque", num_bodies=3):
 
     if RECORD_VIDEO:
         env.client.startStateLogging(
-            env.client.STATE_LOGGING_VIDEO_MP4, f"tabletop/custom_{name_date}_video.mp4"
+            env.client.STATE_LOGGING_VIDEO_MP4, f"results/new/custom_table/custom_{name_date}_video.mp4"
         )
 
     duration = 11.0

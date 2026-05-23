@@ -226,7 +226,7 @@ def main():
     # Dynamically locate the results folder relative to this script's path
     script_dir = os.path.dirname(os.path.abspath(__file__))
     folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "llama3.1_latest")
-    filename = "2026-05-20_Multiple_Safety_Conditions_20_05_v2_barriers.csv"
+    filename = "2026-05-23_Multiple_Safety_Conditions_llama3.1_latest_v2_barriers.csv"
     filepath = os.path.normpath(os.path.join(folder, filename))
 
     # Read CSV

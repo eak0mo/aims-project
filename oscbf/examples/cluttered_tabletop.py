@@ -36,7 +36,7 @@ from barriertransformer import barrier_generate as barrier
 from barriertransformer import visualization as vis
 from barriertransformer import metrics as met
 
-name_date = "cluttered_19_05"
+name_date = "cluttered_23_05"
 SHOW_PLOTS = True
 SAVE_DATA = False
 RECORD_VIDEO = False
@@ -287,9 +287,9 @@ def main(control_method="torque", num_bodies=25):
     collision_data = {"positions": collision_pos, "radii": collision_radii}
 
     # sinusoid task
-    sinusoid_init_pos = (0.4, 0, 0.35)
-    amplitude = (0, 0.25, -0.15)
-    frequency = (0, 5, 2.5)
+    sinusoid_init_pos = (0.31, .49, 0.35)
+    amplitude = (0.07, 0.18, 0)
+    frequency = (2.62, 0.33, 0)
 
     prompt = barrier.create_prompt_col(
         ee_init_pos,
@@ -340,7 +340,7 @@ def main(control_method="torque", num_bodies=25):
     folder = os.path.join(
         script_dir, "..", "..", "results", "llm_res", "llama3.1_latest"
     )
-    filename = "2026-05-20_Cluttered_Tabletop_20_05_v2_barriers.csv"
+    filename = "2026-05-23_Cluttered_Tabletop_llama3.1_latest_v2_barriers.csv"
     filepath = os.path.normpath(os.path.join(folder, filename))
 
     # Read CSV
@@ -494,7 +494,7 @@ def main(control_method="torque", num_bodies=25):
     if RECORD_VIDEO:
         env.client.startStateLogging(
             env.client.STATE_LOGGING_VIDEO_MP4,
-            f"tabletop/original_{name_date}_video.mp4",
+            f"results/new/table/original_{name_date}_video.mp4",
         )
 
     duration = 11.0

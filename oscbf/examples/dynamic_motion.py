@@ -47,7 +47,7 @@ from oscbf.utils.visualization import create_box
 
 DATA_DIR = "results/new/dymo"
 SHOW_IMAGES = True
-name_date = "dynamic_motion_res_qwen3.5_35b"
+name_date = "dynamic_motion_res_llama3.1_latest"
 SAVE_DATA = False
 PAUSE_FOR_PICTURES = False
 RECORD_VIDEO = False
@@ -282,8 +282,8 @@ def main(control_method="torque"):
     # tests for llm results
     # Dynamically locate the results folder relative to this script's path
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "qwen3.5_35b")
-    filename = "2026-05-21_Dynamic_Motion_qwen3.5_35b_v2_barriers.csv"
+    folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "llama3.1_latest")
+    filename = "2026-05-23_Dynamic_Motion_llama3.1_latest_v2_barriers.csv"
     filepath = os.path.normpath(os.path.join(folder, filename))
 
     # Read CSV
