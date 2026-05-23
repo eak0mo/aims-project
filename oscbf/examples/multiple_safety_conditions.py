@@ -313,27 +313,7 @@ def main():
     def compute_control_jit(z, z_des):
         return compute_control(robot, osc_controller, cbf, z, z_des)
 
-    cameras, pixel_width, pixel_height = vis.get_camera_matrices()
-    images = []
-    for view, proj in cameras:
-        width, height, rgb, depth, seg = env.client.getCameraImage(
-            width=pixel_width,
-            height=pixel_height,
-            viewMatrix=view,
-            projectionMatrix=proj,
-            renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,  # ER_TINY_RENDERER
-        )
-        images.append(rgb)
-
-    vis.plot_views(
-        images,
-        pixel_width,
-        pixel_height,
-        show_plots=SHOW_IMAGES,
-        name=f"results/new/mulsafe/{name_date}",
-        folder="test_dynamotion_plots",
-        save_image=SAVE_DATA,
-    )
+    
 
     # while True:
     #     joint_state = env.get_joint_state()
@@ -373,6 +353,30 @@ def main():
         # Calculate h_val using config.h_2
         h_val = config.h_2(joint_state)
         h_hist.append(h_val)
+        
+
+        if i == 1:
+            cameras, pixel_width, pixel_height = vis.get_camera_matrices()
+            images = []
+            for view, proj in cameras:
+                width, height, rgb, depth, seg = env.client.getCameraImage(
+                    width=pixel_width,
+                    height=pixel_height,
+                    viewMatrix=view,
+                    projectionMatrix=proj,
+                    renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,  # ER_TINY_RENDERER
+                )
+                images.append(rgb)
+
+            vis.plot_views(
+                images,
+                pixel_width,
+                pixel_height,
+                show_plots=SHOW_IMAGES,
+                name=f"results/new/mulsafe/{name_date}",
+                folder="test_dynamotion_plots",
+                save_image=SAVE_DATA,
+            )
 
     ts = duration * np.arange(n_timestep)
     vis.plot_link_simulations(

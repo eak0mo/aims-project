@@ -345,7 +345,9 @@ def main(control_method="torque", num_bodies=3):
     # tests for llm results
     # Dynamically locate the results folder relative to this script's path
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "llama3.1_latest")
+    folder = os.path.join(
+        script_dir, "..", "..", "results", "llm_res", "llama3.1_latest"
+    )
     filename = "2026-05-20_Cluttered_Tabletop_Custom_20_05_v2_barriers.csv"
     filepath = os.path.normpath(os.path.join(folder, filename))
 
@@ -499,28 +501,6 @@ def main(control_method="torque", num_bodies=3):
     #     env.apply_control(tau)
     #     env.step()
 
-    cameras, pixel_width, pixel_height = vis.get_camera_matrices()
-    images = []
-    for view, proj in cameras:
-        width, height, rgb, depth, seg = env.client.getCameraImage(
-            width=pixel_width,
-            height=pixel_height,
-            viewMatrix=view,
-            projectionMatrix=proj,
-            renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,  # ER_TINY_RENDERER
-        )
-        images.append(rgb)
-
-    vis.plot_views(
-        images,
-        pixel_width,
-        pixel_height,
-        show_plots=SHOW_PLOTS,
-        name=f"tabletop/custom_{name_date}_cam",
-        folder="tabletop",
-        save_image=SAVE_DATA,
-    )
-
     if RECORD_VIDEO:
         env.client.startStateLogging(
             env.client.STATE_LOGGING_VIDEO_MP4, f"tabletop/custom_{name_date}_video.mp4"
@@ -550,6 +530,29 @@ def main(control_method="torque", num_bodies=3):
 
         h_val = torque_config.h_2(q_qdot)
         h_hist.append(h_val)
+
+        if i == 1:
+            cameras, pixel_width, pixel_height = vis.get_camera_matrices()
+            images = []
+            for view, proj in cameras:
+                width, height, rgb, depth, seg = env.client.getCameraImage(
+                    width=pixel_width,
+                    height=pixel_height,
+                    viewMatrix=view,
+                    projectionMatrix=proj,
+                    renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,  # ER_TINY_RENDERER
+                )
+                images.append(rgb)
+
+            vis.plot_views(
+                images,
+                pixel_width,
+                pixel_height,
+                show_plots=SHOW_PLOTS,
+                name=f"results/new/custom_table/{name_date}_cam",
+                folder="tabletop",
+                save_image=SAVE_DATA,
+            )
 
     ts = duration * np.arange(n_timestep)
 

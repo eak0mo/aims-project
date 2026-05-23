@@ -425,29 +425,6 @@ def main(control_method="torque"):
     #     client=env.client,  # Target the active PyBullet client instance
     # )
 
-    cameras, pixel_width, pixel_height = vis.get_camera_matrices()
-
-    images = []
-    for view, proj in cameras:
-        width, height, rgb, depth, seg = env.client.getCameraImage(
-            width=pixel_width,
-            height=pixel_height,
-            viewMatrix=view,
-            projectionMatrix=proj,
-            renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,  # ER_TINY_RENDERER
-        )
-        images.append(rgb)
-
-    vis.plot_views(
-        images,
-        pixel_width,
-        pixel_height,
-        show_plots=SHOW_IMAGES,
-        name=f"results/new/dymo/{name_date}",
-        folder="test_dynamotion_plots",
-        save_image=SAVE_DATA,
-    )
-
     if RECORD_VIDEO:
         # for saving a live recoding of the simulation from the environment.
         env.client.startStateLogging(
@@ -486,6 +463,30 @@ def main(control_method="torque"):
         # elif control_method == "velocity":
         #     h_val = velocity_cbf.h_np(q_qdot, z_zdot_ee_des)
         h_hist.append(h_val)
+
+        if i == 1:
+            cameras, pixel_width, pixel_height = vis.get_camera_matrices()
+
+            images = []
+            for view, proj in cameras:
+                width, height, rgb, depth, seg = env.client.getCameraImage(
+                    width=pixel_width,
+                    height=pixel_height,
+                    viewMatrix=view,
+                    projectionMatrix=proj,
+                    renderer=pybullet.ER_BULLET_HARDWARE_OPENGL,  # ER_TINY_RENDERER
+                )
+                images.append(rgb)
+
+            vis.plot_views(
+                images,
+                pixel_width,
+                pixel_height,
+                show_plots=SHOW_IMAGES,
+                name=f"results/new/dymo/{name_date}",
+                folder="test_dynamotion_plots",
+                save_image=SAVE_DATA,
+            )
     print(h_val)
 
     ts = duration * np.arange(num_timestep)
