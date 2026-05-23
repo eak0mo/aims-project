@@ -36,7 +36,7 @@ from barriertransformer import barrier_generate as barrier
 from barriertransformer import visualization as vis
 from barriertransformer import metrics as met
 
-name_date = "cluttered_23_05"
+name_date = "cluttered_23_05_llama3.1_latest"
 SHOW_PLOTS = True
 SAVE_DATA = False
 RECORD_VIDEO = False
@@ -494,7 +494,7 @@ def main(control_method="torque", num_bodies=25):
     if RECORD_VIDEO:
         env.client.startStateLogging(
             env.client.STATE_LOGGING_VIDEO_MP4,
-            f"results/new/table/original_{name_date}_video.mp4",
+            f"results/new/table/original_{name_date}.mp4",
         )
 
     duration = 11.0
@@ -554,7 +554,7 @@ def main(control_method="torque", num_bodies=25):
         ts,
         show_plots=SHOW_PLOTS,
         save_image=SAVE_DATA,
-        name=f"tabletop/original_{name_date}_links",
+        name=f"results/new/table/{name_date}_links",
     )
 
     # metrics
@@ -589,14 +589,15 @@ def main(control_method="torque", num_bodies=25):
     )
 
     if SAVE_DATA:
-        met.generate_report(sim_data, output_dir="metrics")
+        met.generate_report(sim_data, output_dir="results/new/table")
+        met.save_barriers_to_csv(sim_data,output_dir="results/new/table")
 
     mean_tau = met.compute_mean_abs_torque(sim_data.u_actual)
     vis.plot_per_joint_torque(
         mean_tau,
         show_plots=SHOW_PLOTS,
         save_image=SAVE_DATA,
-        name=f"tabletop/original_{name_date}_jtorque",
+        name=f"results/new/table/{name_date}_jtorque",
     )
     vis.plot_barrier_evolution(
         time=ts,
@@ -605,7 +606,7 @@ def main(control_method="torque", num_bodies=25):
         u_unsafe=sim_data.u_nominal,
         show_plots=SHOW_PLOTS,
         save_image=SAVE_DATA,
-        name=f"tabletop/original_{name_date}_hevolve",
+        name=f"results/new/table/{name_date}_hevolve",
     )
 
 
