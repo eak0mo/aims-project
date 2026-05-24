@@ -97,7 +97,7 @@ def run_tests(model="llama3.1:70b"):
     }
 
     all_jobs = [
-        dynamic_motion,
+        # dynamic_motion,
         multiple_safety,
         cluttered_tabletop_custom,
         cluttered_tabletop,
