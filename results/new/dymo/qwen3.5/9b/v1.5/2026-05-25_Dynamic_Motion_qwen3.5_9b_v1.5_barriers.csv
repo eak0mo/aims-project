@@ -1,0 +1,2 @@
+Experiment,Prompt Version,EE_Min,EE_Max,WB_Min,WB_Max
+Dynamic_Motion_qwen3.5_9b,v1.5,"(0.23, -0.01, 0.42)","(0.38, 0.64, 0.46)","(-0.86, -0.86, -0.1)","(0.86, 0.86, 1.19)"

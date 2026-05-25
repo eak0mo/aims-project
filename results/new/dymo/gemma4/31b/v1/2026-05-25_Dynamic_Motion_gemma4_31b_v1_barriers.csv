@@ -1,0 +1,2 @@
+Experiment,Prompt Version,EE_Min,EE_Max,WB_Min,WB_Max
+Dynamic_Motion_gemma4_31b,v1,"(0.23, -0.01, 0.42)","(0.38, 0.64, 0.46)","(-0.01, -0.02, 0.24)","(0.39, 0.65, 0.72)"

@@ -1,0 +1,2 @@
+Experiment,Prompt Version,EE_Min,EE_Max,WB_Min,WB_Max
+Dynamic_Motion_llama3.1_latest,v2,"(0.27, 0.35, 0.35)","(0.47, 0.63, 0.55)","(-0.86, -0.86, -0.1)","(0.86, 0.86, 1.19)"

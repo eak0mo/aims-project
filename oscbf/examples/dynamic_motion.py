@@ -46,12 +46,15 @@ from oscbf.core.controllers import (
 from oscbf.utils.visualization import create_box
 
 DATA_DIR = "results/new/dymo"
-SHOW_IMAGES = True
-name_date = "dynamic_motion_res_llama3.1_latest"
-SAVE_DATA = False
+SHOW_IMAGES = False
+name_date = "dynamic_motion_qwen3.5_35b_v1.5"
+SAVE_DATA = True
 PAUSE_FOR_PICTURES = False
 RECORD_VIDEO = False
 PICTURE_IDXS = [1000, 1250, 1600, 1900, 2200]
+
+exp_title = "Dynamic_Motion_qwen3.5_35b"
+prompt_vers = "v1.5"
 
 
 @jax.tree_util.register_static
@@ -282,8 +285,10 @@ def main(control_method="torque"):
     # tests for llm results
     # Dynamically locate the results folder relative to this script's path
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "llama3.1_latest")
-    filename = "2026-05-23_Dynamic_Motion_llama3.1_latest_v2_barriers.csv"
+    folder = os.path.join(
+        script_dir, "..", "..", "results", "llm_res", "qwen3.5_35b"
+    )
+    filename = "2026-05-24_Dynamic_Motion_qwen3.5_35b_wose_barriers.csv"
     filepath = os.path.normpath(os.path.join(folder, filename))
 
     # Read CSV
@@ -304,6 +309,9 @@ def main(control_method="torque"):
         pos_max = tuple(round(v, 2) for v in row["EE_Max"])
         wb_min = tuple(round(v, 2) for v in row["WB_Min"])
         wb_max = tuple(round(v, 2) for v in row["WB_Max"])
+
+    print(f"pos_min: {pos_min}, pos_max: {pos_max}")
+    print(f"wb_min: {wb_min}, wb_max: {wb_max}")
 
     # NOTE: This term has a noticeable impact on the performance for this demo.
     # It's often neglected due to computational demands and model error
@@ -533,8 +541,8 @@ def main(control_method="torque"):
         joint_sphere_radii=joint_sphere_radii,
         collision_spheres=None,
         collision_sphere_radii=None,
-        experiment_title="Dynamic_Motion_res",
-        prompt_version="v2",
+        experiment_title=exp_title,
+        prompt_version=prompt_vers,
     )
     #
     # # 2. Generate CSV Report
