@@ -37,9 +37,12 @@ from oscbf.utils.trajectory import SinusoidalTaskTrajectory
 from oscbf.core.controllers import PoseTaskTorqueController
 
 RECORD_VIDEO = False
-SAVE_DATA = False
+SAVE_DATA = True
 SHOW_IMAGES = True
-name_date = "mult_saf_res_llama_latest_v2"
+name_date = "mult_saf_llama3.1_latest_v2"
+
+exp_title = "Multiple_Safety_Conditions_llama3.1_latest"
+prompt_ver = "v1"
 
 
 @jax.tree_util.register_static
@@ -226,7 +229,7 @@ def main():
     # Dynamically locate the results folder relative to this script's path
     script_dir = os.path.dirname(os.path.abspath(__file__))
     folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "llama3.1_latest")
-    filename = "2026-05-23_Multiple_Safety_Conditions_llama3.1_latest_v2_barriers.csv"
+    filename = "2026-05-23_Multiple_Safety_Conditions_llama3.1_latest_v1_barriers.csv"
     filepath = os.path.normpath(os.path.join(folder, filename))
 
     # Read CSV
@@ -247,6 +250,9 @@ def main():
         ee_pos_max = tuple(round(v, 2) for v in row["EE_Max"])
         wb_pos_min = tuple(round(v, 2) for v in row["WB_Min"])
         wb_pos_max = tuple(round(v, 2) for v in row["WB_Max"])
+
+    print(f"pos_min: {ee_pos_min}, pos_max: {ee_pos_max}")
+    print(f"wb_min: {wb_pos_min}, wb_max: {wb_pos_max}")
 
     collision_data = {"positions": collision_pos, "radii": collision_radii}
     config = CombinedConfig(
@@ -416,8 +422,8 @@ def main():
         joint_sphere_radii=joint_sphere_radii,
         collision_spheres=collision_pos,
         collision_sphere_radii=collision_radii,
-        experiment_title="Multiple_Safety_Conditions_res_llama_latest_v2",
-        prompt_version="v2",
+        experiment_title= exp_title,
+        prompt_version=prompt_ver,
     )
 
     if SAVE_DATA:

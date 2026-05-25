@@ -46,15 +46,15 @@ from oscbf.core.controllers import (
 from oscbf.utils.visualization import create_box
 
 DATA_DIR = "results/new/dymo"
-SHOW_IMAGES = False
-name_date = "dynamic_motion_qwen3.5_35b_v1.5"
-SAVE_DATA = True
+SHOW_IMAGES = True
+name_date = "dynamic_motion_qwen3.5_35b_pnp_v2"
+SAVE_DATA = False
 PAUSE_FOR_PICTURES = False
 RECORD_VIDEO = False
 PICTURE_IDXS = [1000, 1250, 1600, 1900, 2200]
 
-exp_title = "Dynamic_Motion_qwen3.5_35b"
-prompt_vers = "v1.5"
+exp_title = "Dynamic_Motion_qwen3.5_35b_pnp"
+prompt_vers = "v2"
 
 
 @jax.tree_util.register_static
@@ -286,9 +286,9 @@ def main(control_method="torque"):
     # Dynamically locate the results folder relative to this script's path
     script_dir = os.path.dirname(os.path.abspath(__file__))
     folder = os.path.join(
-        script_dir, "..", "..", "results", "llm_res", "qwen3.5_35b"
+        script_dir, "..", "..", "results", "llm_res", "pnp_qwen3.5_35b"
     )
-    filename = "2026-05-24_Dynamic_Motion_qwen3.5_35b_wose_barriers.csv"
+    filename = "2026-05-23_Dynamic_Motion_qwen3.5_35b_v2_barriers.csv"
     filepath = os.path.normpath(os.path.join(folder, filename))
 
     # Read CSV
@@ -326,20 +326,20 @@ def main(control_method="torque"):
     torque_cbf = CBF.from_config(torque_config)
     velocity_config = EESafeSetVelocityConfig(robot, pos_min, pos_max)
     velocity_cbf = CBF.from_config(velocity_config)
-    traj = SinusoidalTaskTrajectory(
-        init_pos=sinusoid_init_pos,
-        init_rot=np.array(
-            [
-                [1, 0, 0],
-                [0, -1, 0],
-                [0, 0, -1],
-            ]
-        ),
-        amplitude=amplitude,
-        angular_freq=frequency,
-        phase=(0, 0, 0),
-    )
-    # traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
+    # traj = SinusoidalTaskTrajectory(
+    #     init_pos=sinusoid_init_pos,
+    #     init_rot=np.array(
+    #         [
+    #             [1, 0, 0],
+    #             [0, -1, 0],
+    #             [0, 0, -1],
+    #         ]
+    #     ),
+    #     amplitude=amplitude,
+    #     angular_freq=frequency,
+    #     phase=(0, 0, 0),
+    # )
+    traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
     timestep = 1 / 1000
     bg_color = (1, 1, 1)
     if control_method == "torque":
