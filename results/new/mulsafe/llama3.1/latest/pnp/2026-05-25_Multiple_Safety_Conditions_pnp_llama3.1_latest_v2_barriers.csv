@@ -1,0 +1,4 @@
+Experiment,Prompt Version,EE_Min,EE_Max,WB_Min,WB_Max
+Multiple_Safety_Conditions_pnp_llama3.1_latest,v2,"(0.14, -0.6, 0.05)","(0.56, 0.6, 0.65)","(-0.72, -1.32, -0.12)","(0.12, 0.12, 0.72)"
+Multiple_Safety_Conditions_pnp_llama3.1_latest,v2,"(0.14, -0.6, 0.05)","(0.56, 0.6, 0.65)","(-0.72, -1.32, -0.12)","(0.12, 0.12, 0.72)"
+Multiple_Safety_Conditions_pnp_llama3.1_latest,v2,"(0.14, -0.6, 0.05)","(0.56, 0.6, 0.65)","(-0.72, -1.32, -0.12)","(0.12, 0.12, 0.72)"

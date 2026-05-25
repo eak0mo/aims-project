@@ -33,16 +33,16 @@ from barriertransformer import metrics as met
 from oscbf.core.manipulator import Manipulator, load_panda
 from oscbf.core.manipulation_env import FrankaTorqueControlEnv
 from oscbf.core.oscbf_configs import OSCBFTorqueConfig
-from oscbf.utils.trajectory import SinusoidalTaskTrajectory
+from oscbf.utils.trajectory import SinusoidalTaskTrajectory, WaypointTaskTrajectory
 from oscbf.core.controllers import PoseTaskTorqueController
 
 RECORD_VIDEO = False
 SAVE_DATA = True
-SHOW_IMAGES = True
-name_date = "mult_saf_llama3.1_latest_v2"
+SHOW_IMAGES = False
+name_date = "mult_saf_pnp_qwen3.5_35b_v2"
 
-exp_title = "Multiple_Safety_Conditions_llama3.1_latest"
-prompt_ver = "v1"
+exp_title = "Multiple_Safety_Conditions_pnp_qwen3.5_35b"
+prompt_ver = "v2"
 
 
 @jax.tree_util.register_static
@@ -214,6 +214,32 @@ def main():
         collision_radii,
     )
 
+    # pick and drop trajectory
+    # waypoint/pick and drop traj
+    way_point_init_post = (0.45, -0.5, 0.55)
+    waypoints = np.array(
+        [
+            [0.45, -0.5, 0.55],  # t=0.0s: Start above pick location
+            [0.45, -0.5, 0.15],  # t=2.0s: Reach down to pick object
+            [0.45, -0.5, 0.55],  # t=4.0s: Lift object back up
+            [0.45, 0.50, 0.55],  # t=7.0s: Move horizontally above drop location
+            [0.45, 0.50, 0.15],  # t=9.0s: Lower down to drop location
+        ]
+    )
+    # Define the exact timestamp (in seconds) for each waypoint
+    times = np.array([0.5, 2.0, 4.0, 7.0, 9.0])
+    # Maintain a constant downward-facing end-effector orientation
+    init_rot = np.array(
+        [
+            [1, 0, 0],
+            [0, -1, 0],
+            [0, 0, -1],
+        ]
+    )
+
+    # pick and drop prompt
+    # prompt = create_prompt_pnp(ee_init_pos, way_point_init_post, waypoints, times)
+
     # print(prompt)
 
     # integration with llama 3.1
@@ -228,8 +254,8 @@ def main():
     # tests for llm results
     # Dynamically locate the results folder relative to this script's path
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "llama3.1_latest")
-    filename = "2026-05-23_Multiple_Safety_Conditions_llama3.1_latest_v1_barriers.csv"
+    folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "pnp_qwen3.5_35b")
+    filename = "2026-05-23_Multiple_Safety_Conditions_qwen3.5_35b_v2_barriers.csv"
     filepath = os.path.normpath(os.path.join(folder, filename))
 
     # Read CSV
@@ -265,19 +291,20 @@ def main():
         wb_pos_max,
     )
     cbf = CBF.from_config(config)
-    traj = SinusoidalTaskTrajectory(
-        init_pos=sinusoid_init_pos,
-        init_rot=np.array(
-            [
-                [1, 0, 0],
-                [0, -1, 0],
-                [0, 0, -1],
-            ]
-        ),
-        amplitude=amplitude,
-        angular_freq=frequency,
-        phase=(0, 0, 0),
-    )
+    # traj = SinusoidalTaskTrajectory(
+    #     init_pos=sinusoid_init_pos,
+    #     init_rot=np.array(
+    #         [
+    #             [1, 0, 0],
+    #             [0, -1, 0],
+    #             [0, 0, -1],
+    #         ]
+    #     ),
+    #     amplitude=amplitude,
+    #     angular_freq=frequency,
+    #     phase=(0, 0, 0),
+    # )
+    traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
     env = FrankaTorqueControlEnv(
         config.pos_min,
         config.pos_max,

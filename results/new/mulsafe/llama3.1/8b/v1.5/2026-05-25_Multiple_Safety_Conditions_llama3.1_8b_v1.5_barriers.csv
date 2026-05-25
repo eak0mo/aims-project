@@ -1,0 +1,2 @@
+Experiment,Prompt Version,EE_Min,EE_Max,WB_Min,WB_Max
+Multiple_Safety_Conditions_llama3.1_8b,v1.5,"(0.23, -0.0, 0.34)","(0.41, 0.38, 0.43)","(-0.45, -0.75, -0.5)","(0.75, 0.65, 1.0)"

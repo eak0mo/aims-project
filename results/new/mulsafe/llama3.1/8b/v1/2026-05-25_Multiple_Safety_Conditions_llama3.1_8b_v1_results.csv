@@ -1,0 +1,2 @@
+Experiment,Prompt Version,MTE_mean_all,MTE_std_all,MTE_mean_last_10s,MTE_std_last_10s,SVR_EE_%,CIA_EE_cumul_vol,CIA_EE_peak_vol,SVR_WB_%,CIA_WB_cumul_vol,CIA_WB_peak_vol,BAR_EE_vol,BAR_WB_vol,BAct_%,BAct_duration_s,TCE
+Multiple_Safety_Conditions_llama3.1_8b,v1,0.5059135089452849,0.06294838761079398,0.5042055250062708,0.06245445715382615,100.0,0.0,0.0,100.0,0.0,0.0,0.041800000000000004,0.043472,100.0,11.0,3918.275111480998

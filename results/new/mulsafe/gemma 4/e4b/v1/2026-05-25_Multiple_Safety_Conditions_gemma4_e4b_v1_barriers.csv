@@ -1,0 +1,2 @@
+Experiment,Prompt Version,EE_Min,EE_Max,WB_Min,WB_Max
+Multiple_Safety_Conditions_gemma4_e4b,v1,"(0.12, 0.0, 0.21)","(0.36, 0.0, 0.64)","(-0.43, -0.43, -0.6)","(0.43, 0.43, 0.6)"
