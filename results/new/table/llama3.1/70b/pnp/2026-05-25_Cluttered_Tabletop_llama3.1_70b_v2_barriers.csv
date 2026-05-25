@@ -1,0 +1,2 @@
+Experiment,Prompt Version,EE_Min,EE_Max,WB_Min,WB_Max
+Cluttered_Tabletop_llama3.1_70b,v2,"(0.14, -0.6, 0.05)","(0.55, 0.6, 0.65)","(-0.1, -0.7, -0.05)","(0.65, 0.7, 0.75)"

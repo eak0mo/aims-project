@@ -1,0 +1,2 @@
+Experiment,Prompt Version,EE_Min,EE_Max,WB_Min,WB_Max
+Cluttered_Tabletop_Custom_gemma4_31b_pnp,v2,"(0.14, -0.6, 0.05)","(0.55, 0.6, 0.65)","(-0.2, -0.8, -0.2)","(0.75, 0.8, 0.85)"

@@ -37,7 +37,7 @@ from oscbf.utils.trajectory import SinusoidalTaskTrajectory, WaypointTaskTraject
 from oscbf.core.controllers import PoseTaskTorqueController
 
 RECORD_VIDEO = False
-SAVE_DATA = True
+SAVE_DATA = False
 SHOW_IMAGES = False
 name_date = "mult_saf_pnp_qwen3.5_35b_v2"
 

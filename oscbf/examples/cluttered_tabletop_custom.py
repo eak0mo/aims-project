@@ -38,10 +38,13 @@ from barriertransformer import barrier_generate as barrier
 from barriertransformer import visualization as vis
 from barriertransformer import metrics as met
 
-name_date = "cus_cluttered_23_05_llama3.1_latest"
-SHOW_PLOTS = True
-SAVE_DATA = False
+name_date = "cus_cluttered_qwen3.5_35b_pnp_v2"
+SHOW_PLOTS = False
+SAVE_DATA = True
 RECORD_VIDEO = False
+
+exp_title = "Cluttered_Tabletop_Custom_qwen3.5_35b_pnp"
+prompt_vers = "v2"
 
 np.random.seed(0)
 
@@ -299,25 +302,25 @@ def main(control_method="torque", num_bodies=3):
     frequency = (0.21, 0, 2.06)
 
     # waypoint/pick and drop traj
-    # waypoints = np.array(
-    #     [
-    #         [0.45, -0.5, 0.55],  # t=0.0s: Start above pick location
-    #         [0.45, -0.5, 0.15],  # t=2.0s: Reach down to pick object
-    #         [0.45, -0.5, 0.55],  # t=4.0s: Lift object back up
-    #         [0.45, 0.50, 0.55],  # t=7.0s: Move horizontally above drop location
-    #         [0.45, 0.50, 0.15],  # t=9.0s: Lower down to drop location
-    #     ]
-    # )
-    # # Define the exact timestamp (in seconds) for each waypoint
-    # times = np.array([0.5, 2.0, 4.0, 7.0, 9.0])
-    # # Maintain a constant downward-facing end-effector orientation
-    # init_rot = np.array(
-    #     [
-    #         [1, 0, 0],
-    #         [0, -1, 0],
-    #         [0, 0, -1],
-    #     ]
-    # )
+    waypoints = np.array(
+        [
+            [0.45, -0.5, 0.55],  # t=0.0s: Start above pick location
+            [0.45, -0.5, 0.15],  # t=2.0s: Reach down to pick object
+            [0.45, -0.5, 0.55],  # t=4.0s: Lift object back up
+            [0.45, 0.50, 0.55],  # t=7.0s: Move horizontally above drop location
+            [0.45, 0.50, 0.15],  # t=9.0s: Lower down to drop location
+        ]
+    )
+    # Define the exact timestamp (in seconds) for each waypoint
+    times = np.array([0.5, 2.0, 4.0, 7.0, 9.0])
+    # Maintain a constant downward-facing end-effector orientation
+    init_rot = np.array(
+        [
+            [1, 0, 0],
+            [0, -1, 0],
+            [0, 0, -1],
+        ]
+    )
 
     prompt = barrier.create_prompt_col(
         ee_init_pos,
@@ -346,9 +349,9 @@ def main(control_method="torque", num_bodies=3):
     # Dynamically locate the results folder relative to this script's path
     script_dir = os.path.dirname(os.path.abspath(__file__))
     folder = os.path.join(
-        script_dir, "..", "..", "results", "llm_res", "llama3.1_latest"
+        script_dir, "..", "..", "results", "llm_res", "pnp_qwen3.5_35b"
     )
-    filename = "2026-05-23_Cluttered_Tabletop_Custom_llama3.1_latest_v2_barriers.csv"
+    filename = "2026-05-23_Cluttered_Tabletop_Custom_qwen3.5_35b_v2_barriers.csv"
     filepath = os.path.normpath(os.path.join(folder, filename))
 
     # Read CSV
@@ -370,6 +373,9 @@ def main(control_method="torque", num_bodies=3):
         wb_pos_min = tuple(round(v, 2) for v in row["WB_Min"])
         wb_pos_max = tuple(round(v, 2) for v in row["WB_Max"])
 
+    print(f"pos_min: {ee_pos_min}, pos_max: {ee_pos_max}")
+    print(f"wb_min: {wb_pos_min}, wb_max: {wb_pos_max}")
+
     torque_config = CollisionsConfig(
         robot,
         z_min,
@@ -381,20 +387,20 @@ def main(control_method="torque", num_bodies=3):
         wb_pos_max,
     )
     torque_cbf = CBF.from_config(torque_config)
-    traj = SinusoidalTaskTrajectory(
-        init_pos=sinusoid_init_pos,
-        init_rot=np.array(
-            [
-                [1, 0, 0],
-                [0, -1, 0],
-                [0, 0, -1],
-            ]
-        ),
-        amplitude=amplitude,
-        angular_freq=frequency,
-        phase=(0, 0, 0),
-    )
-    # traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
+    # traj = SinusoidalTaskTrajectory(
+    #     init_pos=sinusoid_init_pos,
+    #     init_rot=np.array(
+    #         [
+    #             [1, 0, 0],
+    #             [0, -1, 0],
+    #             [0, 0, -1],
+    #         ]
+    #     ),
+    #     amplitude=amplitude,
+    #     angular_freq=frequency,
+    #     phase=(0, 0, 0),
+    # )
+    traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
 
     # velocity configs
     velocity_config = CollisionsVelocityConfig(
@@ -594,8 +600,8 @@ def main(control_method="torque", num_bodies=3):
         joint_sphere_radii=joint_sphere_radii,
         collision_spheres=collision_pos,
         collision_sphere_radii=collision_radii,
-        experiment_title="Cluttered_Tabletop_Custom",
-        prompt_version="v2",
+        experiment_title= exp_title,
+        prompt_version= prompt_vers,
     )
 
     if SAVE_DATA:
