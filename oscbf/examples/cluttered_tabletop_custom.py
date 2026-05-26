@@ -40,7 +40,7 @@ from barriertransformer import metrics as met
 
 name_date = "cus_cluttered_qwen3.5_35b_pnp_v2"
 SHOW_PLOTS = False
-SAVE_DATA = True
+SAVE_DATA = False
 RECORD_VIDEO = False
 
 exp_title = "Cluttered_Tabletop_Custom_qwen3.5_35b_pnp"
