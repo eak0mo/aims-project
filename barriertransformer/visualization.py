@@ -119,7 +119,7 @@ def set_style():
             "pdf.fonttype": 42,  # embed font in output
             "svg.fonttype": "none",  # embed font in output
             "figure.facecolor": "white",
-            "figure.dpi": 100,
+            "figure.dpi": 200,
             "axes.facecolor": "None",
             "axes.spines.left": True,
             "axes.spines.bottom": True,
