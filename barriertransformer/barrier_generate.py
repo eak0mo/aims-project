@@ -3,6 +3,10 @@ from pydantic import BaseModel, Field
 
 import jax
 import jax.numpy as jnp
+import pandas as pd
+import ast
+import os
+
 
 
 # System prompts
@@ -732,3 +736,32 @@ def generate_barrier_old(
 
 # if __name__ == "__main__":
 #     min_bound, max_bound = generate_barrier()
+
+
+def load_barriers_from_csv(folder, filename):
+    filepath = os.path.normpath(os.path.join(folder, filename))
+
+    # Read CSV
+    df = pd.read_csv(filepath)
+
+    # Convert list columns from strings to actual lists
+    list_cols = ["EE_Min", "EE_Max", "WB_Min", "WB_Max"]
+    for col in list_cols:
+        df[col] = df[col].apply(ast.literal_eval)
+
+    # Format and print results
+    for _, row in df.iterrows():
+        print(f"\nExperiment:     {row['Experiment']}")
+        print(f"Prompt Version: {row['Prompt Version']}")
+
+        # Format each list to 2 decimal places as a tuple
+        pos_min = tuple(round(v, 2) for v in row["EE_Min"])
+        pos_max = tuple(round(v, 2) for v in row["EE_Max"])
+        wb_min = tuple(round(v, 2) for v in row["WB_Min"])
+        wb_max = tuple(round(v, 2) for v in row["WB_Max"])
+
+    print(f"pos_min: {pos_min}, pos_max: {pos_max}")
+    print(f"wb_min: {wb_min}, wb_max: {wb_max}")
+
+    return pos_min, pos_max, wb_min, wb_max
+

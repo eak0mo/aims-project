@@ -29,6 +29,7 @@ from barriertransformer.barrier_generate import (
     create_prompt_old,
     create_prompt_col,
     create_prompt_pnp,
+    load_barriers_from_csv,
 )
 from barriertransformer import visualization as vis
 from barriertransformer import metrics as met
@@ -289,29 +290,9 @@ def main(control_method="torque"):
         script_dir, "..", "..", "results", "llm_res", "pnp_qwen3.5_35b"
     )
     filename = "2026-05-23_Dynamic_Motion_qwen3.5_35b_v2_barriers.csv"
-    filepath = os.path.normpath(os.path.join(folder, filename))
 
-    # Read CSV
-    df = pd.read_csv(filepath)
+    pos_min, pos_max, wb_min, wb_max = load_barriers_from_csv(folder, filename)
 
-    # Convert list columns from strings to actual lists
-    list_cols = ["EE_Min", "EE_Max", "WB_Min", "WB_Max"]
-    for col in list_cols:
-        df[col] = df[col].apply(ast.literal_eval)
-
-    # Format and print results
-    for _, row in df.iterrows():
-        print(f"\nExperiment:     {row['Experiment']}")
-        print(f"Prompt Version: {row['Prompt Version']}")
-
-        # Format each list to 2 decimal places as a tuple
-        pos_min = tuple(round(v, 2) for v in row["EE_Min"])
-        pos_max = tuple(round(v, 2) for v in row["EE_Max"])
-        wb_min = tuple(round(v, 2) for v in row["WB_Min"])
-        wb_max = tuple(round(v, 2) for v in row["WB_Max"])
-
-    print(f"pos_min: {pos_min}, pos_max: {pos_max}")
-    print(f"wb_min: {wb_min}, wb_max: {wb_max}")
 
     # NOTE: This term has a noticeable impact on the performance for this demo.
     # It's often neglected due to computational demands and model error
