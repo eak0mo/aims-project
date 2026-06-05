@@ -1,0 +1,23 @@
+\begin{figure}[!ht]
+    \centering
+    \subcaptionbox{Camera Angle 1 }[0.45\textwidth]{\includegraphics[width=\linewidth]{results/tabletop/qwen3.5/35b/pnp/cluttered_table_qwen3.5_35b_v2_cam_1.pdf}}
+    \subcaptionbox{Camera Angle 2}[0.45\textwidth]{\includegraphics[width=\linewidth]{results/tabletop/qwen3.5/35b/pnp/cluttered_table_qwen3.5_35b_v2_cam_2.pdf}}
+
+    \subcaptionbox{Camera Angle 3}[0.45\textwidth]{\includegraphics[width=\linewidth]{results/tabletop/qwen3.5/35b/pnp/cluttered_table_qwen3.5_35b_v2_cam_3.pdf}}
+    \subcaptionbox{Camera Angle 4}[0.45\textwidth]{\includegraphics[width=\linewidth]{results/tabletop/qwen3.5/35b/pnp/cluttered_table_qwen3.5_35b_v2_cam_4.pdf}}
+
+    \subcaptionbox{$h(x)$ evolution}[0.37\textwidth]{\includegraphics[width=\linewidth]{results/tabletop/qwen3.5/35b/pnp/cluttered_table_qwen3.5_35b_v2_hevolve_h_val.pdf}}    
+    \subcaptionbox{Unsafe input command}[0.3\textwidth]{\includegraphics[width=\linewidth]{results/tabletop/qwen3.5/35b/pnp/cluttered_table_qwen3.5_35b_v2_hevolve_safe.pdf}}
+    \subcaptionbox{Safe input command}[0.3\textwidth]{\includegraphics[width=\linewidth]{results/tabletop/qwen3.5/35b/pnp/cluttered_table_qwen3.5_35b_v2_hevolve_unsafe.pdf}}
+
+    \subcaptionbox{Mean Absolute Joint Torques}[0.37\textwidth]{\includegraphics[width=\linewidth]{results/tabletop/qwen3.5/35b/pnp/cluttered_table_qwen3.5_35b_v2_jtorque.pdf}}
+    \subcaptionbox{EE positions}[0.3\textwidth]{\includegraphics[width=\linewidth]{results/tabletop/qwen3.5/35b/pnp/cluttered_table_qwen3.5_35b_v2_links_1.pdf}}
+    \subcaptionbox{Tracking EE error}[0.3\textwidth]{\includegraphics[width=\linewidth]{results/tabletop/qwen3.5/35b/pnp/cluttered_table_qwen3.5_35b_v2_links_3.pdf}}
+    
+    \caption[]{Results from Qwen 3.5 35b with prompt vt2 for Pick and Drop Trajectory}
+    \label{fig:tableqwen3.535bpnp}
+\end{figure}
+
+
+
+vt2 for Pick and Drop Trajectory
