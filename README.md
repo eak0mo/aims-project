@@ -35,6 +35,8 @@ Here are the PyBullet simulation results under various safety-critical operation
 
 ## 🛠️ Project Pipeline
 
+![Project Flowchart](newflowchart.png)
+
 ```mermaid
 graph TD
     A[User Prompt / Task Description] --> B[Ollama LLM Client]
