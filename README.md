@@ -1,136 +1,175 @@
-# aims-project read-me updates
+# Operational Space Control Barrier Functions (OSCBF) with LLM-Generated Safety Barriers
 
-## Metrics addition and evaluation W5 
-13-05 
-added a custom pick and drop trajectory
+Code and evaluation framework for integrating Large Language Models (LLMs) with **Operational Space Control Barrier Functions (OSCBF)** to synthesize safe, real-time controllers for robotic manipulators (specifically the Franka Emika Panda).
 
-
-11-05 to 12-05
-
-Added some new metrics and added some visualization of what they mean.
-
-These are the metrics and what they mean and should signify
-
-1. Mean Tracking Error with standard deviation
-	- This metric tracks the average tracking error between the end-effector of the robot and the target, it also returns the standard deviation to show the average in the error over the simulation
-2. Safety Violation Rate
-	- This metric tracks if the trajectory of the target goes outside the safe barrier region(if it is the end-effector). 
-	- while for the whole body, it takes the collision balls for the robot and checks all the balls against the whole body barrier
-3. Collision Intersection Area
-	- This metrics tracks how much of the barrier is intersecting with any collision objects in the environment, not relevant in the dynamic motion but more relvant for multiple safety condition and the final example
-4. Barrier Volume
-	1. End-effector
-		- based on generate barrier from the llm, this calculates the volume of the barrier generated
-	2. Whole body
-		- This metric calculates the whole body barrier
-5. Barrier Activation Rate
-	- This measures how much the control input is adjusted based on the safety filter
-		- returns as percentage and the duration of time it is active for
-6. Joint absolute torque
-	- This calculates the means of the torque values sent to each joint, over the entire simulation. this gives an average of the total effort taken by each joints
-7. Total Control effort
-	- This is the second norm of the control input and shows the magnitude of the total input used to complete the task
-8. Barrier evolution
-	- this takes the h(t) value from the paper and plots the evolution from the h2 or h1 function used
-	- h2 is used as in the dyanmic motion with the torque
-
-in the metrics csv, first row is for the default example and the second for the ollama barrier (from 11-05)
-(12-05) contains the results from tests done on tuesday
-
-The results are in the csv file and additional plots in the example folder, any comments would be appreciated on how suitable they are or not for the project
-
-
-## Ollama Integration and tests W3 -W4
-
- 
-
-01-05
-
-Added whole body barriers and collision inputs for the propmt generation, also added a new prompt generations for the list of collision points.
-
-  
-
-added an additional prompt that is more finetuned to handle the collision and everything else. next plans are listed in the project report
-
-  
-
-I created python files for the barrier generation from ollama and for visualizations in the barrier transformer folder.
-
-  
-
-I was able to test that the call to ollama was succesful and the simulation was also working.
-
-  
-
-I made changes to the simulation to have a fixed duration and also collected the details of the robot for the simulation for plotting later.
-
-  
-
-I also reduced the prompt to be much simplier and gave a description of the environment and the robot to have a more accurate barrier.
-
-  
-
-29-04
-
-I added video capturing by installing ffmpeg.
-
-did some changes on the prompt which seemed to help
-
-  
-
-I also added singularity avoidance that is available in the package which improved the performance of the model between the result plots.
-
-  
-
-I tried to give the input position of the environment as json like inputs but they didn't work because the barrier needs to be given before parameters can be found but i used the values and a workaround
-
-  
-
-I will work on reviewing some papers on LLM for robotics on thursday and friday and continue writing the report and going through other literature i have
-
-  
+This project extends the original OSCBF framework (*"Safe, Task-Consistent Manipulation with Operational Space Control Barrier Functions"* -- Daniel Morton and Marco Pavone, accepted to IROS 2025) by adding an LLM-in-the-loop pipeline that automatically generates safety boundaries from natural language descriptions of the robot workspace, task trajectory, and obstacles.
 
 ---
 
-  
+## 🎬 Simulation Results
 
-## LLM test
+Here are the PyBullet simulation results under various safety-critical operational conditions with LLM-generated barriers:
 
-The file containing the LLM tests with ollama is ollama_eval_standardized.ipynb, llm tests and ollama demo contain older version i was playing around with.
+| **Dynamic Motion Tracking** | **Multiple Safety Conditions** |
+|:---:|:---:|
+| ![Dynamic Motion](results/dynamic_motion%20%281%29.gif) | ![Multiple Safety Conditions](results/multiple_safe_cond.gif) |
+| *Sinusoidal trajectory tracking with LLM-generated boundary* | *Joint limit, singularity, and workspace boundary compliance* |
 
-  
-  
+| **Cluttered Tabletop Manipulation** | **Custom Tabletop Scenario** |
+|:---:|:---:|
+| ![Cluttered Tabletop](results/cluttered%20table.gif) | ![Custom Tabletop](results/custom_table.gif) |
+| *Pick-and-place tracking with spherical obstacle avoidance* | *Custom layout manipulation avoiding restricted zones* |
 
-### Reasoning for the tests
+---
 
-I am testing a mock workflow for the project by giving llama 3.1 a description of the box as given from an observer, and seeing how accurately it can give the important dimensions of the box.
+## 🚀 Key Features
 
-  
+* **LLM-in-the-loop Barrier Generation**: Automatically translates environment descriptions, target trajectories, and obstacle coordinates into mathematically certified Control Barrier Functions (CBFs).
+* **Dual-Barrier System**:
+  * **EE (End-Effector) Barrier**: Minimal bounding box enclosing the target trajectory and end-effector paths.
+  * **WB (Whole-body) Barrier**: Broader bounding box protecting the entire arm sweep (including the base and links) and shrinking to avoid obstacles.
+* **OSCBF Safety Filtering**: Evaluates safety constraints at kilohertz speeds, filtering nominal control inputs (torque or velocity) to ensure safety.
+* **Extensive Evaluation Suite**: Built-in scripts to evaluate tracking error, safety violations, torque effort, and barrier activation rates across multiple models (Llama 3.1, Gemma 4, Qwen 3.5) and prompting versions.
 
-There are 4 possible variables I am making use of, the type of barrier cube or sphere (limited to cube for now), the center and the length of each side (pybullet format) and the minimum and maximum points of the box (used in the OSCBF paper).
+---
 
-  
+## 🛠️ Project Pipeline
 
-the prompts are all generated by claude and only gives 2 out of the 4 possible values of the box (center, legths, min edge, max edge). then from this prompt the llama 3.1 model should give the other 2 values and the same prompt it was given. from the 40 texts tested the highest performance is 90% or 85% on center and lengths while min and max edges are 50%
+```mermaid
+graph TD
+    A[User Prompt / Task Description] --> B[Ollama LLM Client]
+    B -->|System Prompt Rules| C[JSON Barrier Parameters]
+    C -->|EE & WB Boundaries| D[OSCBF Safety Filter]
+    D -->|Filtered Torques/Velocities| E[PyBullet Simulation]
+    E -->|Real-Time State Logging| F[Evaluation & Metrics CSV]
+    F -->|plot_mte.py| G[Comparative Box Plots]
+```
 
-  
+---
 
-### Methodology reasoning
+## 📁 Repository Structure
 
-From the inital method i showed about 2 weeks ago, it was the simple structured output method which i found varied a lot in the response output.
+```
+├── barriertransformer/          # Core modules for LLM prompting & metrics
+│   ├── barrier_generate.py      # LLM prompts (v1, v1.5, v2, pnp) & Ollama wrapper
+│   ├── metrics.py               # Evaluation metrics computation (MTE, SVR, etc.)
+│   └── visualization.py         # Matplotlib plotting helper functions
+├── cbf_clone/                   # Local fork of the core CBFpy package
+├── llm_gen/                     # Jupyter notebooks & scripts testing structured LLM output
+├── oscbf/                       # The Operational Space Control Barrier Function core controller
+│   ├── core/                    # Manipulator models, controller logic, and environments
+│   └── examples/                # PyBullet simulation examples (dynamic motion, tabletop)
+├── results/                     # Experimental outputs, boxplots, logs, and video captures
+│   ├── mte_boxplots/            # Generated box plots comparing LLM models
+│   └── mte_raw_data.csv         # Aggregated benchmark data
+├── fill_mte_csv.py              # Script to aggregate simulation results into mte_raw_data.csv
+└── plot_mte.py                  # Script to plot comparative boxplots from mte_raw_data.csv
+```
 
-This week i added a reasoning stage before the structured stage in 2 approaches
+---
 
-1. Full thinking before structured output
+## 📑 LLM Prompting & System Prompts
 
-    here the model is given the question like a user gives a question to chatgpt and receives the entire response, which another model then filters out the final answer based on the json structure
+The barrier generation utilizes local LLMs (run via Ollama) with structured prompt templates. The prompts have evolved to improve the precision and minimality of generated barriers:
 
-2. thinking within the structured output
+* **`v1` (Initial Prompt)**: Basic instruction set for generating a single bounding box.
+* **`v1.5` (Intermediate Prompt)**: Separation of EE and WB barriers with basic collision avoidance logic.
+* **`v2` (Sinusoidal - Sinusoid Range & Collision Focus)**: Structured rules constraining body barriers strictly to the robot's physical reach, shrinking only the face intersecting collision objects.
+* **`pnp` (Pick and Place - Flat Waypoint Path)**: Tailored for sequential discrete motions. Scans all waypoints, identifies coordinate extremes, adds precise buffers, and centers boundaries.
 
-    here the model is given the space to think but it is within the structure output wanted by pydantic
+The LLM output is parsed into a structured Pydantic schema:
+```json
+{
+  "reasoning": "Step-by-step reasoning details...",
+  "ee_center":  [x, y, z],
+  "ee_lengths": [lx, ly, lz],
+  "wb_center":  [x, y, z],
+  "wb_lengths": [lx, ly, lz]
+}
+```
 
-  
+---
 
-I would love any suggestions on how to improve this.
+## 📊 Evaluation Metrics
 
-but my current thoughts are to use the best performing metric (center and lengths), and then use a function similar to what the OSCBF paper to calculate the edges. and if a different model is used I have a structure to see what metrics it performs best with and use a function to get the rest.
+The system calculates 8 performance metrics in `barriertransformer/metrics.py` to evaluate each run:
+1. **Mean Tracking Error ($\overline{\text{TE}}$)**: Mean and standard deviation of the distance between end-effector and target.
+2. **Safety Violation Rate**: Fraction of the trajectory where the end-effector/whole body goes outside safe boundaries.
+3. **Collision Intersection Area**: Intersecting volume between the safety barriers and obstacle collision spheres.
+4. **Barrier Volume**: Computational volume of both the EE and WB barriers.
+5. **Barrier Activation Rate**: The percentage of simulation steps where the safety filter overrides/adjusts the nominal control input.
+6. **Joint Absolute Torque**: Mean absolute torque sent to each joint, measuring physical motor effort.
+7. **Total Control Effort**: $L_2$ norm of the control input vector throughout the task.
+8. **Barrier Evolution ($h(t)$)**: Logs safety margin values over time.
+
+---
+
+## ⚙️ Installation & Setup
+
+1. **Clone the Repository**:
+   ```bash
+   git clone <repository_url>
+   cd aims-project
+   ```
+
+2. **Create a Virtual Environment**:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+3. **Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   pip install -e ./oscbf
+   pip install -e ./cbf_clone/cbfpy
+   ```
+
+4. **Set Up Ollama**:
+   Ensure Ollama is installed and running locally. Pull the required models:
+   ```bash
+   ollama pull llama3.1
+   ollama pull qwen3.5:35b
+   ollama pull gemma2
+   ```
+
+---
+
+## 📈 Running Demos & Benchmarks
+
+### 1. Running Demos
+You can run any of the simulation examples from the `oscbf/examples` directory:
+```bash
+python oscbf/examples/dynamic_motion.py --control_method torque
+```
+*Note: Toggle `RECORD_VIDEO = True` or `SAVE_DATA = True` inside the script to capture videos or export CSV metrics.*
+
+### 2. Aggregating Metrics
+To populate the main evaluation sheet `results/mte_raw_data.csv` with recently run simulation logs:
+```bash
+python fill_mte_csv.py
+```
+
+### 3. Generating Box Plots
+To generate comparative model evaluation box plots from the raw data:
+```bash
+python plot_mte.py
+```
+This will generate box plots (e.g. comparing tracking errors across models/prompt versions) under `results/mte_boxplots/`.
+
+---
+
+## 🔗 Original Citation & Reference
+
+If you build upon the core OSCBF control code, please cite the original work:
+
+```bibtex
+@inproceedings{morton2025oscbf,
+  author={Morton, Daniel and Pavone, Marco},
+  booktitle={2025 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
+  title={Safe, Task-Consistent Manipulation with Operational Space Control Barrier Functions}, 
+  year={2025},
+  pages={187-194},
+  doi={10.1109/IROS60139.2025.11246389}
+}
+```
