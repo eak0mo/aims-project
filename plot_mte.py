@@ -160,7 +160,6 @@ def main():
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
-
     # Get unique models and sort them in the requested custom order from left to right
     custom_model_order = [
         "llama3.1_latest",
@@ -170,12 +169,11 @@ def main():
         "gemma4_31b",
         "qwen3.5_9b",
         "qwen3.5_27b",
-        "qwen3.5_35b"
+        "qwen3.5_35b",
     ]
     model_order_dict = {model: i for i, model in enumerate(custom_model_order)}
     unique_models = sorted(
-        list(df["Model"].unique()),
-        key=lambda x: model_order_dict.get(x, 99)
+        list(df["Model"].unique()), key=lambda x: model_order_dict.get(x, 99)
     )
 
     # Find all unique combinations of Experiment and Prompt_Version in the data
@@ -186,9 +184,13 @@ def main():
         return
 
     # Check if Last 10s columns are present in CSV
-    has_last_10s = "MTE_Mean_Last_10s" in df.columns and "MTE_Std_Last_10s" in df.columns
+    has_last_10s = (
+        "MTE_Mean_Last_10s" in df.columns and "MTE_Std_Last_10s" in df.columns
+    )
 
-    print(f"Found {len(combinations)} Experiment + Prompt combinations. Generating separate box plots...")
+    print(
+        f"Found {len(combinations)} Experiment + Prompt combinations. Generating separate box plots..."
+    )
 
     for _, row_comb in combinations.iterrows():
         exp = row_comb["Experiment"]
@@ -208,7 +210,7 @@ def main():
         box_colors = []
         box_alphas = []
         positions_list = []
-        
+
         my_pal = [
             "#29AF8C",
             "#3D9CCC",
@@ -216,9 +218,11 @@ def main():
             "#D58C2E",
             "#C9492C",
             "#44546A",
-            "#97BE49"
+            "#97BE49",
         ]
-        model_colors = {model: my_pal[i % len(my_pal)] for i, model in enumerate(unique_models)}
+        model_colors = {
+            model: my_pal[i % len(my_pal)] for i, model in enumerate(unique_models)
+        }
 
         for m_idx, model in enumerate(unique_models):
             df_sub_model = df_sub[df_sub["Model"] == model]
@@ -231,16 +235,18 @@ def main():
             if pd.isna(std_val):
                 std_val = 0.0
             half_std = 0.5 * std_val
-            
-            bxpstats.append({
-                "label": model,
-                "med": mean_val,
-                "q1": mean_val - half_std,
-                "q3": mean_val + half_std,
-                "whislo": mean_val - std_val,
-                "whishi": mean_val + std_val,
-                "fliers": []
-            })
+
+            bxpstats.append(
+                {
+                    "label": model,
+                    "med": mean_val,
+                    "q1": mean_val - half_std,
+                    "q3": mean_val + half_std,
+                    "whislo": mean_val - std_val,
+                    "whishi": mean_val + std_val,
+                    "fliers": [],
+                }
+            )
             box_colors.append(model_colors[model])
             box_alphas.append(0.85)
             positions_list.append(m_idx - 0.2 if has_last_10s else m_idx)
@@ -249,22 +255,24 @@ def main():
             if has_last_10s:
                 mean_val_10s = df_sub_model["MTE_Mean_Last_10s"].mean()
                 std_val_10s = df_sub_model["MTE_Std_Last_10s"].mean()
-                
+
                 # Check if this specific model has data for 10s
                 if not pd.isna(mean_val_10s):
                     if pd.isna(std_val_10s):
                         std_val_10s = 0.0
                     half_std_10s = 0.5 * std_val_10s
-                    
-                    bxpstats.append({
-                        "label": f"{model}_10s",
-                        "med": mean_val_10s,
-                        "q1": mean_val_10s - half_std_10s,
-                        "q3": mean_val_10s + half_std_10s,
-                        "whislo": mean_val_10s - std_val_10s,
-                        "whishi": mean_val_10s + std_val_10s,
-                        "fliers": []
-                    })
+
+                    bxpstats.append(
+                        {
+                            "label": f"{model}_10s",
+                            "med": mean_val_10s,
+                            "q1": mean_val_10s - half_std_10s,
+                            "q3": mean_val_10s + half_std_10s,
+                            "whislo": mean_val_10s - std_val_10s,
+                            "whishi": mean_val_10s + std_val_10s,
+                            "fliers": [],
+                        }
+                    )
                     box_colors.append(model_colors[model])
                     box_alphas.append(0.40)  # semi-transparent for last 10s
                     positions_list.append(m_idx + 0.2)
@@ -275,7 +283,13 @@ def main():
 
         # Draw the boxplot using ax.bxp at explicit positions
         box_width = 0.25 if has_last_10s else 0.4
-        artists = ax.bxp(bxpstats, positions=positions_list, showmeans=False, patch_artist=True, widths=box_width)
+        artists = ax.bxp(
+            bxpstats,
+            positions=positions_list,
+            showmeans=False,
+            patch_artist=True,
+            widths=box_width,
+        )
 
         # Apply styling, palette colors, and alphas
         for patch, color, alpha in zip(artists["boxes"], box_colors, box_alphas):
@@ -300,14 +314,14 @@ def main():
         # Title & Labels
         clean_exp = exp.replace("_", " ")
         ax.set_title(
-            fr"{clean_exp} Example (prompt {pv}) - $\overline{{TE}}$",
-            fontsize=11,
+            rf"{clean_exp} Example (prompt {pv}) - $\overline{{TE}}$",
+            fontsize=15,
             fontweight="bold",
             pad=15,
         )
-        ax.set_xlabel("LLM Model", fontsize=9, fontweight="bold", labelpad=8)
+        ax.set_xlabel("LLM Model", fontsize=15, fontweight="bold", labelpad=8)
         ax.set_ylabel(
-            r"$\overline{TE}$ (m)", fontsize=9, fontweight="bold", labelpad=8
+            r"$\overline{TE}$ (m)", fontsize=15, fontweight="bold", labelpad=8
         )
 
         # Clean axes lines and grid
@@ -323,11 +337,28 @@ def main():
         # Add custom legend to differentiate All Time and Last 10s if both are plotted
         if has_last_10s:
             from matplotlib.patches import Patch
+
             legend_elements = [
-                Patch(facecolor="#666666", edgecolor="#333333", alpha=0.85, label=r"All Time $\overline{TE}$"),
-                Patch(facecolor="#666666", edgecolor="#333333", alpha=0.40, label=r"Last 10s $\overline{{TE}}$")
+                Patch(
+                    facecolor="#666666",
+                    edgecolor="#333333",
+                    alpha=0.85,
+                    label=r"All Time $\overline{TE}$",
+                ),
+                Patch(
+                    facecolor="#666666",
+                    edgecolor="#333333",
+                    alpha=0.40,
+                    label=r"Last 10s $\overline{{TE}}$",
+                ),
             ]
-            ax.legend(handles=legend_elements, frameon=True, facecolor="white", edgecolor="none", fontsize=9)
+            ax.legend(
+                handles=legend_elements,
+                frameon=True,
+                facecolor="white",
+                edgecolor="none",
+                fontsize=15,
+            )
 
         # Save output for this specific experiment and prompt combination
         safe_exp = exp.lower().replace(" ", "_")
@@ -347,5 +378,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
