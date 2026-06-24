@@ -293,7 +293,6 @@ def main(control_method="torque"):
 
     pos_min, pos_max, wb_min, wb_max = load_barriers_from_csv(folder, filename)
 
-
     # NOTE: This term has a noticeable impact on the performance for this demo.
     # It's often neglected due to computational demands and model error
     compensate_centrifugal_coriolis = False

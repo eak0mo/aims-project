@@ -37,11 +37,11 @@ from oscbf.utils.trajectory import SinusoidalTaskTrajectory, WaypointTaskTraject
 from oscbf.core.controllers import PoseTaskTorqueController
 
 RECORD_VIDEO = False
-SAVE_DATA = False
+SAVE_DATA = True
 SHOW_IMAGES = False
-name_date = "mult_saf_pnp_qwen3.5_35b_v2"
+name_date = "mult_saf_llama3.1_latest"
 
-exp_title = "Multiple_Safety_Conditions_pnp_qwen3.5_35b"
+exp_title = "Multiple_Safety_Conditions_llama3.1_latest"
 prompt_ver = "v2"
 
 
@@ -254,8 +254,10 @@ def main():
     # tests for llm results
     # Dynamically locate the results folder relative to this script's path
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    folder = os.path.join(script_dir, "..", "..", "results", "llm_res", "pnp_qwen3.5_35b")
-    filename = "2026-05-23_Multiple_Safety_Conditions_qwen3.5_35b_v2_barriers.csv"
+    folder = os.path.join(
+        script_dir, "..", "..", "results", "llm_res", "llama3.1_latest"
+    )
+    filename = "2026-05-23_Multiple_Safety_Conditions_llama3.1_latest_v2_barriers.csv"
     filepath = os.path.normpath(os.path.join(folder, filename))
 
     # Read CSV
@@ -291,20 +293,20 @@ def main():
         wb_pos_max,
     )
     cbf = CBF.from_config(config)
-    # traj = SinusoidalTaskTrajectory(
-    #     init_pos=sinusoid_init_pos,
-    #     init_rot=np.array(
-    #         [
-    #             [1, 0, 0],
-    #             [0, -1, 0],
-    #             [0, 0, -1],
-    #         ]
-    #     ),
-    #     amplitude=amplitude,
-    #     angular_freq=frequency,
-    #     phase=(0, 0, 0),
-    # )
-    traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
+    traj = SinusoidalTaskTrajectory(
+        init_pos=sinusoid_init_pos,
+        init_rot=np.array(
+            [
+                [1, 0, 0],
+                [0, -1, 0],
+                [0, 0, -1],
+            ]
+        ),
+        amplitude=amplitude,
+        angular_freq=frequency,
+        phase=(0, 0, 0),
+    )
+    # traj = WaypointTaskTrajectory(waypoints=waypoints, times=times, init_rot=init_rot)
     env = FrankaTorqueControlEnv(
         config.pos_min,
         config.pos_max,
@@ -346,8 +348,6 @@ def main():
     def compute_control_jit(z, z_des):
         return compute_control(robot, osc_controller, cbf, z, z_des)
 
-    
-
     # while True:
     #     joint_state = env.get_joint_state()
     #     ee_state_des = env.get_desired_ee_state()
@@ -358,7 +358,8 @@ def main():
     if RECORD_VIDEO:
         # for saving the video in the env
         env.client.startStateLogging(
-            env.client.STATE_LOGGING_VIDEO_MP4, f"results/new/mulsafe/{name_date}_video.mp4"
+            env.client.STATE_LOGGING_VIDEO_MP4,
+            f"results/new/mulsafe/{name_date}_video.mp4",
         )
 
     duration = 11.0
@@ -386,7 +387,6 @@ def main():
         # Calculate h_val using config.h_2
         h_val = config.h_2(joint_state)
         h_hist.append(h_val)
-        
 
         if i == 1:
             cameras, pixel_width, pixel_height = vis.get_camera_matrices()
@@ -449,7 +449,7 @@ def main():
         joint_sphere_radii=joint_sphere_radii,
         collision_spheres=collision_pos,
         collision_sphere_radii=collision_radii,
-        experiment_title= exp_title,
+        experiment_title=exp_title,
         prompt_version=prompt_ver,
     )
 
