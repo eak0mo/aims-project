@@ -1,13 +1,10 @@
-from ollama import chat
-from pydantic import BaseModel, Field
-
-import jax
-import jax.numpy as jnp
-import pandas as pd
 import ast
 import os
 
-
+import jax.numpy as jnp
+import pandas as pd
+from ollama import chat
+from pydantic import BaseModel, Field
 
 # System prompts
 
@@ -764,4 +761,3 @@ def load_barriers_from_csv(folder, filename):
     print(f"wb_min: {wb_min}, wb_max: {wb_max}")
 
     return pos_min, pos_max, wb_min, wb_max
-

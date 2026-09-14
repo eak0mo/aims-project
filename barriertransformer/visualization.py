@@ -64,37 +64,35 @@ def plot_views(
     show_plots=False,
     name=None,
     save_image=False,
-    folder: str = "test_dynamotion_plots",
 ):
+    if not show_plots and not save_image:
+        return
+
     set_style()
     camera_labels = ["Camera 1", "Camera 2", "Camera 3", "Top-down"]
     mosaic = [["Camera 1", "Camera 2"], ["Camera 3", "Top-down"]]
 
-    fig, axes = plt.subplot_mosaic(mosaic, figsize=(5, 4), dpi=300)
+    np_images = [np.reshape(img, (pixel_height, pixel_width, 4)) for img in images]
 
-    for label, img in zip(camera_labels, images):
-        np_img = np.reshape(img, (pixel_height, pixel_width, 4))
+    fig, axes = plt.subplot_mosaic(mosaic, figsize=(5, 4), dpi=300)
+    for label, np_img in zip(camera_labels, np_images):
         axes[label].imshow(np_img)
         axes[label].set_title(label, fontsize=8)
         axes[label].axis("off")
 
     if save_image:
-        for i, img in enumerate(images):
-            np_img = np.reshape(img, (pixel_height, pixel_width, 4))
-            fig_temp, ax_temp = plt.subplots(figsize=(5, 4), dpi=300)
-            ax_temp.imshow(np_img)
-            ax_temp.axis("off")
-            fig_temp.savefig(f"{name}_{i + 1}.pdf", bbox_inches="tight", pad_inches=0)
-            plt.close(fig_temp)
+        dirname = os.path.dirname(name) if name else None
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
+        fig.savefig(f"{name}.pdf", bbox_inches="tight", pad_inches=0)
 
-        # path = os.path.join(folder, name)
-        plt.savefig(name + ".pdf")
-        # plt.savefig(path)
+        for i, np_img in enumerate(np_images):
+            plt.imsave(f"{name}_{i + 1}.pdf", np_img)
 
     if show_plots:
         plt.show()
 
-    return
+    plt.close(fig)
 
 
 def set_style():
@@ -125,8 +123,21 @@ def set_style():
             "axes.spines.bottom": True,
             "axes.spines.right": False,
             "axes.spines.top": False,
+            "legend.fontsize": 4.5,
         },
     )
+
+
+_cached_robot = None
+
+
+def _get_robot(robot=None):
+    global _cached_robot
+    if robot is not None:
+        return robot
+    if _cached_robot is None:
+        _cached_robot = load_panda()
+    return _cached_robot
 
 
 def plot_link_simulations(
@@ -138,11 +149,14 @@ def plot_link_simulations(
     show_plots=False,
     save_image=False,
     name="simulation_plot",
+    robot=None,
 ):
     """
     Plots 3 different plots: the current and desired EE position, the safe command,
     and the difference between task and the end-effector position.
     """
+    if not show_plots and not save_image:
+        return
 
     set_style()
     q_hist = np.asarray(q_hist)
@@ -150,20 +164,21 @@ def plot_link_simulations(
     u_safe_hist = np.asarray(u_safe_hist)
     ts = np.asarray(ts)
 
-    # 1. Compute actual EE position
-    robot = load_panda()
+    # 1. Compute actual EE position (reusing robot if provided or cached)
+    robot = _get_robot(robot)
 
     # We vmap over the joint positions (first num_joints elements of q_hist)
     q_pos = q_hist[:, : robot.num_joints]
 
     # Compute EE positions using forward kinematics
-    ee_pos_hist = jax.vmap(robot.ee_position)(q_pos)
+    ee_pos_hist = np.asarray(jax.vmap(robot.ee_position)(q_pos))
 
     # EE desired is in q_des_hist (N, 18), first 3 are positions
     ee_des_pos_hist = q_des_hist[:, :3]
 
     # EE task error (difference between desired task and actual EE position)
     ee_error = ee_des_pos_hist - ee_pos_hist
+    error_norm = np.linalg.norm(ee_error, axis=1)
 
     # Create 3 subplots using subplot_mosaic
     mosaic = [["pos"], ["cmd"], ["err"]]
@@ -214,7 +229,6 @@ def plot_link_simulations(
         ax.plot(ts, ee_error[:, 0], label="Error X", color="r")
         ax.plot(ts, ee_error[:, 1], label="Error Y", color="g")
         ax.plot(ts, ee_error[:, 2], label="Error Z", color="b")
-        error_norm = np.linalg.norm(ee_error, axis=1)
         ax.plot(ts, error_norm, label="Error Norm", color="k", linestyle=":")
         ax.set_xlabel("Time (s)")
         ax.set_ylabel("Position Error (m)")
@@ -230,30 +244,25 @@ def plot_link_simulations(
     # Plot 3: Error
     _plot_err(axes["err"])
 
-    # plt.tight_layout()
-
     if save_image:
-        fig1, ax1 = plt.subplots(figsize=(10, 4))
-        _plot_pos(ax1)
-        fig1.savefig(f"{name}_1.pdf", bbox_inches="tight")
-        plt.close(fig1)
+        dirname = os.path.dirname(name)
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
 
-        fig2, ax2 = plt.subplots(figsize=(10, 4))
-        _plot_cmd(ax2)
-        fig2.savefig(f"{name}_2.pdf", bbox_inches="tight")
-        plt.close(fig2)
+        fig.savefig(f"{name}.pdf", bbox_inches="tight")
 
-        fig3, ax3 = plt.subplots(figsize=(10, 4))
-        _plot_err(ax3)
-        fig3.savefig(f"{name}_3.pdf", bbox_inches="tight")
-        plt.close(fig3)
-
-        plt.savefig(name + ".pdf")
+        # Reuse a single figure to export individual subplots efficiently
+        fig_single, ax_single = plt.subplots(figsize=(10, 4))
+        for i, plot_fn in enumerate((_plot_pos, _plot_cmd, _plot_err), start=1):
+            plot_fn(ax_single)
+            fig_single.savefig(f"{name}_{i}.pdf", bbox_inches="tight")
+            ax_single.cla()
+        plt.close(fig_single)
 
     if show_plots:
         plt.show()
 
-    return fig, axes
+    plt.close(fig)
 
 
 def plot_barrier_evolution(
@@ -266,6 +275,9 @@ def plot_barrier_evolution(
     show_plots=False,
     name="test_dynamotion_plots/barrier_evolution",
 ):
+    if not show_plots and not save_image:
+        return
+
     set_style()
     mosaic = [["safe"], ["unsafe"], ["barrier"]]
     fig, axes = plt.subplot_mosaic(mosaic, figsize=(10, 12), sharex=True)
@@ -337,11 +349,11 @@ def plot_barrier_evolution(
             )
 
         ax.axhline(0, color="#C9492C", linestyle="--", label="h=0")
-        
+
         # Calculate limits from plotted lines to shade the entire background half-plane uniformly
         ax.autoscale(enable=True, axis="y", tight=False)
         ymin, ymax = ax.get_ylim()
-        
+
         ax.fill_between(
             time,
             ymin,
@@ -362,26 +374,28 @@ def plot_barrier_evolution(
     _plot_barrier(axes["barrier"])
 
     if save_image:
-        fig1, ax1 = plt.subplots(figsize=(10, 4))
-        _plot_safe(ax1)
-        fig1.savefig(f"{name}_safe.pdf", bbox_inches="tight")
-        plt.close(fig1)
+        dirname = os.path.dirname(name)
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
 
-        fig2, ax2 = plt.subplots(figsize=(10, 4))
-        _plot_unsafe(ax2)
-        fig2.savefig(f"{name}_unsafe.pdf", bbox_inches="tight")
-        plt.close(fig2)
+        fig.savefig(f"{name}.pdf", bbox_inches="tight")
 
-        fig3, ax3 = plt.subplots(figsize=(10, 4))
-        _plot_barrier(ax3)
-        fig3.savefig(f"{name}_h_val.pdf", bbox_inches="tight")
-        plt.close(fig3)
+        # Reuse a single figure to export individual subplots efficiently
+        fig_single, ax_single = plt.subplots(figsize=(10, 4))
+        for suffix, plot_fn in (
+            ("safe", _plot_safe),
+            ("unsafe", _plot_unsafe),
+            ("h_val", _plot_barrier),
+        ):
+            plot_fn(ax_single)
+            fig_single.savefig(f"{name}_{suffix}.pdf", bbox_inches="tight")
+            ax_single.cla()
+        plt.close(fig_single)
 
-        plt.savefig(name + ".pdf", bbox_inches="tight")
-        
     if show_plots:
         plt.show()
-    return fig, axes
+
+    plt.close(fig)
 
 
 def plot_per_joint_torque(
@@ -391,6 +405,9 @@ def plot_per_joint_torque(
     show_plots=False,
     name="test_dynamotion_plots/per_joint_torque",
 ):
+    if not show_plots and not save_image:
+        return
+
     set_style()
     fig, ax = plt.subplots(figsize=(8, 4))
 
@@ -404,7 +421,12 @@ def plot_per_joint_torque(
     ax.set_title("Per-Joint Mean Absolute Torque")
 
     if save_image:
-        plt.savefig(name + ".pdf", bbox_inches="tight")
+        dirname = os.path.dirname(name)
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
+        fig.savefig(f"{name}.pdf", bbox_inches="tight")
+
     if show_plots:
         plt.show()
-    return fig, ax
+
+    plt.close(fig)

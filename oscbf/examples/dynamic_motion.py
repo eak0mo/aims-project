@@ -23,30 +23,30 @@ from jax.typing import ArrayLike
 # import matplotlib.pyplot as plt
 
 sys.path.append("././")
+# from package.pack import test
+from cbfpy import CBF
+
+from barriertransformer import metrics as met
+from barriertransformer import visualization as vis
 from barriertransformer.barrier_generate import (
-    generate_barrier,
     create_prompt,
-    create_prompt_old,
     create_prompt_col,
+    create_prompt_old,
     create_prompt_pnp,
+    generate_barrier,
     load_barriers_from_csv,
 )
-from barriertransformer import visualization as vis
-from barriertransformer import metrics as met
-# from package.pack import test
-
-from cbfpy import CBF
-from oscbf.core.manipulator import Manipulator, load_panda
-from oscbf.core.manipulation_env import FrankaTorqueControlEnv, FrankaVelocityControlEnv
-from oscbf.core.oscbf_configs import OSCBFTorqueConfig, OSCBFVelocityConfig
-from oscbf.utils.trajectory import SinusoidalTaskTrajectory, WaypointTaskTrajectory
 from oscbf.core.controllers import (
     PoseTaskTorqueController,
     PoseTaskVelocityController,
 )
+from oscbf.core.manipulation_env import FrankaTorqueControlEnv, FrankaVelocityControlEnv
+from oscbf.core.manipulator import Manipulator, load_panda
+from oscbf.core.oscbf_configs import OSCBFTorqueConfig, OSCBFVelocityConfig
+from oscbf.utils.trajectory import SinusoidalTaskTrajectory, WaypointTaskTrajectory
 from oscbf.utils.visualization import create_box
 
-DATA_DIR = "results/new/dymo"
+DATA_DIR = "results/im"
 SHOW_IMAGES = True
 name_date = "dynamic_motion_qwen3.5_35b_pnp_v2"
 SAVE_DATA = False
@@ -471,8 +471,7 @@ def main(control_method="torque"):
                 pixel_width,
                 pixel_height,
                 show_plots=SHOW_IMAGES,
-                name=f"results/new/dymo/{name_date}",
-                folder="test_dynamotion_plots",
+                name=f"{DATA_DIR}/{name_date}",
                 save_image=SAVE_DATA,
             )
     print(h_val)

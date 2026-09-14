@@ -63,3 +63,6 @@ paper_env/
 # Additional ignored directories
 cbf_clone/
 **/.venv/
+
+# specfic files
+readmetracker.md
