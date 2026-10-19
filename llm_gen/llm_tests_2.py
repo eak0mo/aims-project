@@ -6,6 +6,7 @@ import numpy as np
 import os
 import sys
 
+
 def run_tests(model="llama3.1:70b"):
     model_name = model.replace(":", "_")
 
@@ -139,13 +140,14 @@ def run_tests(model="llama3.1:70b"):
                 prompt_version=p_ver,
             )
 
-            output_path = os.path.join(job["output_dir"], "llm_res", model_name)
+            output_path = os.path.join(job["output_dir"], "new_res", model_name)
             os.makedirs(output_path, exist_ok=True)
 
             met.save_barriers_to_csv(sim_data, output_dir=output_path)
 
         except Exception as e:
             print(f"    Error during barrier generation under {p_ver}: {e}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run LLM barrier tests version 2.")

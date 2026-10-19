@@ -68,7 +68,7 @@ def run_tests(model="llama3.1:70b"):
     }
 
     # Cluttered Tabletop Custom
-    np.random.seed(0)
+    # np.random.seed(0)
 
     max_num_bodies_custom = 5
     all_collision_pos_custom = jnp.array(
@@ -97,7 +97,7 @@ def run_tests(model="llama3.1:70b"):
     }
 
     all_jobs = [
-        # dynamic_motion,
+        dynamic_motion,
         multiple_safety,
         cluttered_tabletop_custom,
         cluttered_tabletop,
@@ -184,7 +184,7 @@ def run_tests(model="llama3.1:70b"):
                     prompt_version=p_ver,
                 )
 
-                output_path = os.path.join(job["output_dir"], "llm_res", model_name)
+                output_path = os.path.join(job["output_dir"], "new_res", model_name)
                 os.makedirs(output_path, exist_ok=True)
 
                 met.save_barriers_to_csv(sim_data, output_dir=output_path)
